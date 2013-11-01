@@ -114,6 +114,7 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
         
         Closer.close(zkItf);
         
+        HBASE_ADMIN = new HBaseAdmin(HBASE_TEST_UTILITY.getConfiguration());
         
     }
     
@@ -129,7 +130,6 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     public void setUp() throws Exception {
         HTableDescriptor tableDescriptor = new HTableDescriptor(TEST_TABLE_NAME);
         tableDescriptor.addFamily(new HColumnDescriptor(TEST_COLFAM_NAME));
-        HBASE_ADMIN = new HBaseAdmin(HBASE_TEST_UTILITY.getConfiguration());
         HBASE_ADMIN.createTable(tableDescriptor);
         
         recordTable = new HTable(HBASE_TEST_UTILITY.getConfiguration(), TEST_TABLE_NAME);

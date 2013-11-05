@@ -282,7 +282,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
             "--fanout", "2",
             "--zk-host", SOLR_ZK,
             "--collection", "collection1",
-            "--log4j", new File(Resources.getResource("log4j.properties").toURI()).toString(),
+            "--log4j", new File(Resources.getResource("log4j-base.properties").toURI()).toString(),
             "--go-live-threads", "999",
             "--go-live");
         

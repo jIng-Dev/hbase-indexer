@@ -157,7 +157,7 @@ public class HBaseMapReduceIndexerToolTest {
             "--overwrite-output-dir",
             "--hbase-table-name", "record",
             "--verbose",
-            "--log4j", new File(Resources.getResource("log4j.properties").toURI()).toString()
+            "--log4j", new File(Resources.getResource("log4j-base.properties").toURI()).toString()
             );
         
         ForkedTestUtils.validateSolrServerDocumentCount(

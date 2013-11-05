@@ -627,7 +627,7 @@
               <exclude>**/target/**</exclude>
               <exclude>**/README.md</exclude>
               <exclude>**/readme.txt</exclude>
-              <exclude>**/*log4j.properties</exclude>
+              <exclude>**/*log4j*.properties</exclude>
               <exclude>.git/**</exclude>
               <exclude>.gitignore</exclude>
               <exclude>.repository/</exclude>

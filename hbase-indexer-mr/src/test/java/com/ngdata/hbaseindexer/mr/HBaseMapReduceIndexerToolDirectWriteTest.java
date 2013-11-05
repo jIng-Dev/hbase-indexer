@@ -99,7 +99,7 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
         
         SOLR_ZK = "127.0.0.1:" + zkClientPort + "/solr";
         INDEXER_ZK = "localhost:" + zkClientPort;
-        ZooKeeperItf zkItf = ZkUtil.connect(INDEXER_ZK, 5000);
+        ZooKeeperItf zkItf = ZkUtil.connect(INDEXER_ZK, 15000);
         INDEXER_MODEL = new IndexerModelImpl(zkItf, "/ngdata/hbaseindexer");
         IndexerDefinition indexerDef = new IndexerDefinitionBuilder()
         .name("zkindexerdef")
@@ -160,7 +160,7 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
         INDEXER_MODEL.addIndexer(indexerDef);
         
         // Wait max 5 seconds
-        while (System.currentTimeMillis() - startTime < 5000) {
+        while (System.currentTimeMillis() - startTime < 15000) {
             if (INDEXER_MODEL.hasIndexer(indexerDef.getName())) {
                 return;
             }

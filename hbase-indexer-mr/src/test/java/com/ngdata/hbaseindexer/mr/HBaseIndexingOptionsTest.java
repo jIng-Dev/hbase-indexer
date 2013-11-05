@@ -71,7 +71,7 @@ public class HBaseIndexingOptionsTest {
         ZK_CLUSTER.setDefaultClientPort(ZK_CLIENT_PORT);
         ZK_CLUSTER.startup(ZK_DIR);
         
-        ZK = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 5000);
+        ZK = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 15000);
         INDEXER_MODEL = new IndexerModelImpl(ZK, "/ngdata/hbaseindexer");
     }
 
@@ -110,7 +110,7 @@ public class HBaseIndexingOptionsTest {
         INDEXER_MODEL.addIndexer(indexerDef);
         
         // Wait max 5 seconds
-        while (System.currentTimeMillis() - startTime < 5000) {
+        while (System.currentTimeMillis() - startTime < 15000) {
             if (INDEXER_MODEL.hasIndexer(indexerDef.getName())) {
                 return;
             }

@@ -70,8 +70,8 @@ public class IndexerModelImplTest {
 
     @Test
     public void testEvents() throws Exception {
-        ZooKeeperItf zk1 = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 5000);
-        ZooKeeperItf zk2 = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 5000);
+        ZooKeeperItf zk1 = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 15000);
+        ZooKeeperItf zk2 = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 15000);
         WriteableIndexerModel model1 = null;
         WriteableIndexerModel model2 = null;
         try {
@@ -154,8 +154,8 @@ public class IndexerModelImplTest {
 
     @Test
     public void testLocking() throws Exception {
-        ZooKeeperItf zk1 = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 5000);
-        ZooKeeperItf zk2 = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 5000);
+        ZooKeeperItf zk1 = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 15000);
+        ZooKeeperItf zk2 = ZkUtil.connect("localhost:" + ZK_CLIENT_PORT, 15000);
         WriteableIndexerModel model1 = null;
         WriteableIndexerModel model2 = null;
         String indexerName = "lock_test_indexer";

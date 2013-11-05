@@ -33,10 +33,13 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CloudSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
+import org.apache.solr.common.SolrInputDocument;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -194,10 +197,54 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
      * Execute a Solr query on a specific collection.
      */
     private SolrDocumentList executeSolrQuery(CloudSolrServer collection, String queryString) throws SolrServerException {
-        QueryResponse response = collection.query(new SolrQuery(queryString));
+        SolrQuery query = new SolrQuery(queryString).setRows(Integer.MAX_VALUE).addSort("id", ORDER.asc);
+        QueryResponse response = collection.query(query);
         return response.getResults();
     }
     
+    private void verifySolrContents() throws Exception {
+
+        // verify query
+        assertEquals(RECORD_COUNT, executeSolrQuery("*:*").getNumFound());
+        assertEquals(1, executeSolrQuery("firstname_s:John0001").getNumFound());
+        int i = 0;
+        for (SolrDocument doc : executeSolrQuery("*:*")) {
+            assertEquals(String.format("row%04d", i), doc.getFirstValue("id"));
+            assertEquals(String.format("John%04d", i), doc.getFirstValue("firstname_s"));
+            assertEquals(String.format("Doe%04d", i), doc.getFirstValue("lastname_s"));
+            
+            // perform update
+            doc.removeFields("_version_");
+            SolrInputDocument update = new SolrInputDocument();
+            for (Map.Entry<String, Object> entry : doc.entrySet()) {
+                update.setField(entry.getKey(), entry.getValue());
+            }
+            update.setField("firstname_s", String.format("Nadja%04d", i));
+            COLLECTION1.add(update);
+            i++;
+        }
+        assertEquals(RECORD_COUNT, i);
+        COLLECTION1.commit();
+        
+        // verify updates
+        assertEquals(RECORD_COUNT, executeSolrQuery("*:*").getNumFound());
+        i = 0;
+        for (SolrDocument doc : executeSolrQuery("*:*")) {
+            assertEquals(String.format("row%04d", i), doc.getFirstValue("id"));
+            assertEquals(String.format("Nadja%04d", i), doc.getFirstValue("firstname_s"));
+            assertEquals(String.format("Doe%04d", i), doc.getFirstValue("lastname_s"));
+            
+            // perform delete
+            COLLECTION1.deleteById((String)doc.getFirstValue("id"));
+            i++;
+        }
+        assertEquals(RECORD_COUNT, i);
+        COLLECTION1.commit();
+        
+        // verify deletes
+        assertEquals(0, executeSolrQuery("*:*").size());
+    }
+  
     @Test
     public void testIndexer_GoLive() throws Exception {
 
@@ -206,9 +253,8 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
                 "--go-live",
                 "--collection", "collection1",
                 "--zk-host", SOLR_ZK);
-        
-        assertEquals(RECORD_COUNT, executeSolrQuery("*:*").getNumFound());
-        assertEquals(1, executeSolrQuery("firstname_s:John0001").getNumFound());
+
+        verifySolrContents();
     }
     
     @Test
@@ -221,8 +267,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
                 "--collection", "collection1",
                 "--zk-host", SOLR_ZK);
         
-        assertEquals(RECORD_COUNT, executeSolrQuery("*:*").getNumFound());
-        assertEquals(1, executeSolrQuery("firstname_s:John0001").getNumFound());
+        verifySolrContents();
     }
     
     @Test
@@ -241,8 +286,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
             "--go-live-threads", "999",
             "--go-live");
         
-        assertEquals(RECORD_COUNT, executeSolrQuery("*:*").getNumFound());
-        assertEquals(1, executeSolrQuery("firstname_s:John0001").getNumFound());
+        verifySolrContents();
     }
     
     @Test
@@ -255,8 +299,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
                 "--solr-home-dir", MINIMR_CONF_DIR.toString(),
                 "--zk-host", SOLR_ZK);
         
-        assertEquals(RECORD_COUNT, executeSolrQuery("*:*").getNumFound());
-        assertEquals(1, executeSolrQuery("firstname_s:John0001").getNumFound());
+        verifySolrContents();
     }
     
     @Test
@@ -266,7 +309,6 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
                 "--hbase-indexer-zk", INDEXER_ZK,
                 "--go-live");
         
-        assertEquals(RECORD_COUNT, executeSolrQuery("*:*").getNumFound());
-        assertEquals(1, executeSolrQuery("firstname_s:John0001").getNumFound());
+        verifySolrContents();
     }
 }

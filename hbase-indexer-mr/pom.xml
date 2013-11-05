@@ -29,11 +29,24 @@
     <relativePath>..</relativePath>
   </parent>
 
+  <properties>
+    <hadoop.version>${cdh.mr1.version}</hadoop.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core</artifactId>
+      <artifactId>hadoop-client</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minicluster</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>com.ngdata</groupId>
       <artifactId>hbase-indexer-engine</artifactId>
@@ -86,26 +99,16 @@
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs</artifactId>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <profiles>
+    <profile>
+      <id>yarn</id>
+      <properties>
+        <hadoop.version>${cdh.hadoop.version}</hadoop.version>
+      </properties>
+    </profile>
+
     <profile>
       <id>0.94</id>
       <activation>

@@ -98,6 +98,8 @@ public class IndexerIT {
         conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
         conf.setLong("replication.source.sleepforretries", 50);
         conf.set("replication.replicationsource.implementation", SepReplicationSource.class.getName());
+        conf.setInt("hbase.master.info.port", -1);
+        conf.setInt("hbase.regionserver.info.port", -1);
 
         hbaseTestUtil = new HBaseTestingUtility(conf);
         hbaseTestUtil.startMiniZKCluster(1);

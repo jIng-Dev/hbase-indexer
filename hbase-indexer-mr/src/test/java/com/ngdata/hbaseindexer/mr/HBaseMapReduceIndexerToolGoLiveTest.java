@@ -61,7 +61,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
     private static final byte[] TEST_TABLE_NAME = Bytes.toBytes("record");
     private static final byte[] TEST_COLFAM_NAME = Bytes.toBytes("info");
     
-    private static final HBaseTestingUtility HBASE_TEST_UTILITY = new HBaseTestingUtility();
+    private static final HBaseTestingUtility HBASE_TEST_UTILITY  = HBaseTestingUtilityFactory.createTestUtility();
     private static MRTestUtil MR_TEST_UTIL;
     private static SolrTestingUtility SOLR_TEST_UTILITY;
     

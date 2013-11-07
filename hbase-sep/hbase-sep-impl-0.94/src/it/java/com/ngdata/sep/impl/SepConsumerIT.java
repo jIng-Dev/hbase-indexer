@@ -84,6 +84,8 @@ public class SepConsumerIT {
         clusterConf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
         clusterConf.setLong("replication.source.sleepforretries", 50);
         clusterConf.set("replication.replicationsource.implementation", SepReplicationSource.class.getName());
+        clusterConf.setInt("hbase.master.info.port", -1);
+        clusterConf.setInt("hbase.regionserver.info.port", -1);
 
         hbaseTestUtil = new HBaseTestingUtility(clusterConf);
         

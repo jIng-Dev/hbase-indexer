@@ -29,9 +29,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -78,6 +80,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cloudera.cdk.morphline.base.Fields;
+import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
+import com.google.common.io.ByteStreams;
 
 
 /**
@@ -800,12 +805,12 @@ public class ForkedMapReduceIndexerTool extends Configured implements Tool {
        * the same SolrCloud cluster, using identical unique document keys.
        */
       if (job.getConfiguration().get(JobContext.PARTITIONER_CLASS_ATTR) == null) { // enable customization
-        job.setPartitionerClass(SolrCloudPartitioner.class);
+        job.setPartitionerClass(ForkedSolrCloudPartitioner.class);
       }
-      job.getConfiguration().set(SolrCloudPartitioner.ZKHOST, options.zkHost);
-      job.getConfiguration().set(SolrCloudPartitioner.COLLECTION, options.collection);
+      job.getConfiguration().set(ForkedSolrCloudPartitioner.ZKHOST, options.zkHost);
+      job.getConfiguration().set(ForkedSolrCloudPartitioner.COLLECTION, options.collection);
     }
-    job.getConfiguration().setInt(SolrCloudPartitioner.SHARDS, options.shards);
+    job.getConfiguration().setInt(ForkedSolrCloudPartitioner.SHARDS, options.shards);
 
     job.setOutputFormatClass(SolrOutputFormat.class);
     if (options.solrHomeDir != null) {
@@ -859,9 +864,9 @@ public class ForkedMapReduceIndexerTool extends Configured implements Tool {
     while (reducers > options.shards) { // run a mtree merge iteration
       job = Job.getInstance(conf);
       job.setJarByClass(ForkedMapReduceIndexerTool.class);
-      job.setJobName(ForkedMapReduceIndexerTool.class.getName() + "/" + Utils.getShortClassName(TreeMergeMapper.class));
-      job.setMapperClass(TreeMergeMapper.class);
-      job.setOutputFormatClass(TreeMergeOutputFormat.class);
+      job.setJobName(ForkedMapReduceIndexerTool.class.getName() + "/" + Utils.getShortClassName(ForkedTreeMergeMapper.class));
+      job.setMapperClass(ForkedTreeMergeMapper.class);
+      job.setOutputFormatClass(ForkedTreeMergeOutputFormat.class);
       job.setNumReduceTasks(0);
       job.setOutputKeyClass(Text.class);
       job.setOutputValueClass(NullWritable.class);
@@ -883,6 +888,9 @@ public class ForkedMapReduceIndexerTool extends Configured implements Tool {
       startTime = System.currentTimeMillis();
       if (!waitForCompletion(job, options.isVerbose)) {
         return -1; // job failed
+      }
+      if (!renameTreeMergeShardDirs(outputTreeMergeStep, job, fs)) {
+        return -1;
       }
       secs = (System.currentTimeMillis() - startTime) / 1000.0f;
       LOG.info("MTree merge iteration {}/{}: Done. Merging {} shards into {} shards using fanout {} took {} secs",
@@ -1163,8 +1171,96 @@ public class ForkedMapReduceIndexerTool extends Configured implements Tool {
         throw new IllegalStateException("Not a directory: " + dir.getPath());
       }
     }
-    Arrays.sort(dirs); // FIXME: handle more than 99999 shards (need numeric sort rather than lexicographical sort)
+
+    // use alphanumeric sort (rather than lexicographical sort) to properly handle more than 99999 shards
+    Arrays.sort(dirs, new Comparator<FileStatus>() {
+      @Override
+      public int compare(FileStatus f1, FileStatus f2) {
+        return new ForkedAlphaNumericComparator().compare(f1.getPath().getName(), f2.getPath().getName());
+      }
+    });
+
     return dirs;
+  }
+  
+  /*
+   * You can run MapReduceIndexerTool in Solrcloud mode, and once the MR job completes, you can use
+   * the standard solrj Solrcloud API to send doc updates and deletes to SolrCloud, and those updates
+   * and deletes will go to the right Solr shards, and it will work just fine.
+   * 
+   * The MapReduce framework doesn't guarantee that input split N goes to the map task with the
+   * taskId = N. The job tracker and Yarn schedule and assign tasks, considering data locality
+   * aspects, but without regard of the input split# withing the overall list of input splits. In
+   * other words, split# != taskId can be true.
+   * 
+   * To deal with this issue, our mapper tasks write a little auxiliary meta data file (per task)
+   * that tells the job driver which taskId processed which split#. Once the mapper-only job is
+   * completed, the job driver renames the output dirs such that the dir name contains the true solr
+   * shard id, based on these auxiliary files.
+   * 
+   * This way each doc gets assigned to the right Solr shard even with #reducers > #solrshards
+   * 
+   * Example for a merge with two shards:
+   * 
+   * part-m-00000 and part-m-00001 goes to outputShardNum = 0 and will end up in merged part-m-00000
+   * part-m-00002 and part-m-00003 goes to outputShardNum = 1 and will end up in merged part-m-00001
+   * part-m-00004 and part-m-00005 goes to outputShardNum = 2 and will end up in merged part-m-00002
+   * ... and so on
+   * 
+   * Also see run() method above where it uses NLineInputFormat.setNumLinesPerSplit(job,
+   * options.fanout)
+   * 
+   * Also see TreeMergeOutputFormat.TreeMergeRecordWriter.writeShardNumberFile()
+   */
+  private static boolean renameTreeMergeShardDirs(Path outputTreeMergeStep, Job job, FileSystem fs) throws IOException {
+    final String dirPrefix = SolrOutputFormat.getOutputName(job);
+    FileStatus[] dirs = fs.listStatus(outputTreeMergeStep, new PathFilter() {      
+      @Override
+      public boolean accept(Path path) {
+        return path.getName().startsWith(dirPrefix);
+      }
+    });
+    
+    for (FileStatus dir : dirs) {
+      if (!dir.isDirectory()) {
+        throw new IllegalStateException("Not a directory: " + dir.getPath());
+      }
+    }
+
+    for (FileStatus dir : dirs) {
+      Path path = dir.getPath();
+      Path renamedPath = new Path(path.getParent(), "_" + path.getName());
+      if (!rename(path, renamedPath, fs)) {
+        return false;
+      }
+    }
+    
+    for (FileStatus dir : dirs) {
+      Path path = dir.getPath();
+      Path renamedPath = new Path(path.getParent(), "_" + path.getName());
+      
+      Path solrShardNumberFile = new Path(renamedPath, ForkedTreeMergeMapper.SOLR_SHARD_NUMBER);
+      InputStream in = fs.open(solrShardNumberFile);
+      byte[] bytes = ByteStreams.toByteArray(in);
+      in.close();
+      Preconditions.checkArgument(bytes.length > 0);
+      int solrShard = Integer.parseInt(new String(bytes, Charsets.UTF_8));
+      if (!delete(solrShardNumberFile, false, fs)) {
+        return false;
+      }
+      
+      // see FileOutputFormat.NUMBER_FORMAT
+      NumberFormat numberFormat = NumberFormat.getInstance();
+      numberFormat.setMinimumIntegerDigits(5);
+      numberFormat.setGroupingUsed(false);
+      Path finalPath = new Path(renamedPath.getParent(), dirPrefix + "-m-" + numberFormat.format(solrShard));
+      
+      LOG.info("MTree merge renaming solr shard: " + solrShard + " from dir: " + dir.getPath() + " to dir: " + finalPath);
+      if (!rename(renamedPath, finalPath, fs)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static void verifyGoLiveArgs(Options opts, ArgumentParser parser) throws ArgumentParserException {

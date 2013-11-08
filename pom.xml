@@ -639,6 +639,7 @@
               <exclude>**/conf/*</exclude>
               <exclude>**/src/it/resources/**</exclude>
               <exclude>**/META-INF/services/**</exclude>
+              <exclude>**/ForkedAlphaNumericComparator.java</exclude> <!-- MIT -->
             </excludes>
           </configuration>
           <executions>

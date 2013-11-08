@@ -91,11 +91,12 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
                 ImmutableMap.of(
                         "solr.hdfs.blockcache.enabled", "false",
                         "solr.directoryFactory", "HdfsDirectoryFactory",
-                        "solr.data.dir", fs.makeQualified(new Path("/solrdata")).toString()));
+                        "solr.hdfs.home", fs.makeQualified(new Path("/solrdata")).toString()));
         SOLR_TEST_UTILITY.start();
+        
         SOLR_TEST_UTILITY.uploadConfig("config1", new File(MINIMR_CONF_DIR, "conf"));
-        SOLR_TEST_UTILITY.createCore("collection1_core1", "collection1", "config1", 1);
-        SOLR_TEST_UTILITY.createCore("collection2_core1", "collection2", "config1", 1);
+        SOLR_TEST_UTILITY.createCollection("collection1", "config1", 2);
+        SOLR_TEST_UTILITY.createCollection("collection2", "config1", 2);
 
         COLLECTION1 = new CloudSolrServer(SOLR_TEST_UTILITY.getZkConnectString());
         COLLECTION1.setDefaultCollection("collection1");
@@ -197,7 +198,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
      * Execute a Solr query on a specific collection.
      */
     private SolrDocumentList executeSolrQuery(CloudSolrServer collection, String queryString) throws SolrServerException {
-        SolrQuery query = new SolrQuery(queryString).setRows(Integer.MAX_VALUE).addSort("id", ORDER.asc);
+        SolrQuery query = new SolrQuery(queryString).setRows(RECORD_COUNT * 2).addSort("id", ORDER.asc);
         QueryResponse response = collection.query(query);
         return response.getResults();
     }

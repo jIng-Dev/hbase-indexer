@@ -668,7 +668,7 @@ public class HBaseIndexingOptionsTest {
 
     @Test
     public void testHelpWithNonSolrCloud() throws Exception {
-      String[] args = new String[] {"--help", "--showNonSolrCloud"};
+      String[] args = new String[] {"--help", "--show-non-solr-cloud"};
       assertEquals(0, ToolRunner.run(new Configuration(), new HBaseMapReduceIndexerTool(), args));
     }
 

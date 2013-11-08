@@ -49,7 +49,7 @@ import org.apache.solr.hadoop.dedup.RetainMostRecentUpdateConflictResolver;
  */
 class HBaseIndexerArgumentParser {
 
-    private static final String SHOW_NON_SOLR_CLOUD = "--showNonSolrCloud";
+    private static final String SHOW_NON_SOLR_CLOUD = "--show-non-solr-cloud";
 
     private static final Log LOG = LogFactory.getLog(HBaseIndexerArgumentParser.class);
 

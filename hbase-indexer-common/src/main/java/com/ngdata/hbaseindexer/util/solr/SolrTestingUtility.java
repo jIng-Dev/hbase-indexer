@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -203,9 +204,20 @@ public class SolrTestingUtility {
      * Creates a new core, associated with a collection, in Solr.
      */
     public void createCore(String coreName, String collectionName, String configName, int numShards) throws IOException {
+        createCore(coreName, collectionName, configName, numShards, null);
+    }
+    
+    /**
+     * Creates a new core, associated with a collection, in Solr.
+     */
+    public void createCore(String coreName, String collectionName, String configName, int numShards, String dataDir) throws IOException {
         String url = "http://localhost:" + solrPort + "/solr/admin/cores?action=CREATE&name=" + coreName
                 + "&collection=" + collectionName + "&configName=" + configName + "&numShards=" + numShards;
-
+        
+        if (dataDir != null) {
+            url += "&dataDir=" + dataDir;
+        }
+        
         URL coreActionURL = new URL(url);
         HttpURLConnection conn = (HttpURLConnection)coreActionURL.openConnection();
         conn.connect();
@@ -216,4 +228,19 @@ public class SolrTestingUtility {
                     + conn.getResponseMessage());
         }
     }
+
+    /**
+     * Create a Solr collection with a given number of shards.
+     * 
+     * @param collectionName name of the collection to be created
+     * @param configName name of the config for the collection
+     * @param numShards number of shards in the collection
+     */
+    public void createCollection(String collectionName, String configName, int numShards) throws IOException {
+        for (int shardIndex = 0; shardIndex < numShards; shardIndex++) {
+            String coreName = String.format("%s_shard%d", collectionName, shardIndex + 1);
+            createCore(coreName, collectionName, configName, numShards, coreName + "_data");
+        }
+    }
+
 }

@@ -27,6 +27,7 @@
   <properties>
     <version.solr>${cdh.solr.version}</version.solr>
     <version.guava>11.0.2</version.guava>
+    <version.joda-time>1.6</version.joda-time>
     <version.slf4j>1.7.2</version.slf4j>
     <version.hbase94>0.94.6-cdh4.3.0</version.hbase94>
     <version.hbase95>${cdh.hbase.version}</version.hbase95>
@@ -387,6 +388,11 @@
         <groupId>org.slf4j</groupId>
         <artifactId>jul-to-slf4j</artifactId>
         <version>${version.slf4j}</version>
+      </dependency>
+      <dependency>
+        <groupId>joda-time</groupId>
+        <artifactId>joda-time</artifactId>
+        <version>${version.joda-time}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

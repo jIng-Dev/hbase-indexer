@@ -28,7 +28,7 @@
     <version.solr>${cdh.solr.version}</version.solr>
     <version.guava>11.0.2</version.guava>
     
-    <version.slf4j>1.7.2</version.slf4j>
+    <version.slf4j>1.6.1</version.slf4j>
     <version.hbase94>${cdh.hbase.version}</version.hbase94>
     <version.hbase95>${cdh.hbase.version}</version.hbase95>
     <version.hadoop.hbase95>${cdh.hadoop.version}</version.hadoop.hbase95>

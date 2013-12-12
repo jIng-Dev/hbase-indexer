@@ -27,6 +27,7 @@
       <outputDirectory>lib</outputDirectory>
       <excludes>
         <exclude>${groupId}:${artifactId}</exclude>
+        <exclude>org.slf4j:slf4j-log4j12</exclude> <!-- CDH-16073 -->
       </excludes>
     </dependencySet>
     <dependencySet>

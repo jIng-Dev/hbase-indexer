@@ -18,7 +18,7 @@ package com.ngdata.hbaseindexer.morphline;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import com.cloudera.cdk.morphline.api.MorphlineContext;
+import org.kitesdk.morphline.api.MorphlineContext;
 import com.ngdata.hbaseindexer.parse.ByteArrayExtractor;
 
 /**

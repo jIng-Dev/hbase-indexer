@@ -44,7 +44,7 @@ public class MorphlineClasspathUtil {
    * like this:
    * 
    * ... caused by compilation failed: mfm:///MyJavaClass1.java:2: package
-   * com.cloudera.cdk.morphline.api does not exist
+   * org.kitesdk.morphline.api does not exist
    */
   public static void setupJavaCompilerClasspath() {
     if (!IS_INITIALIZED.compareAndSet(false, true)) {

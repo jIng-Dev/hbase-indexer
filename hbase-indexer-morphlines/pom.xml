@@ -35,8 +35,8 @@
       <artifactId>hbase-indexer-engine</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.cloudera.cdk</groupId>
-      <artifactId>cdk-morphlines-all</artifactId>
+      <groupId>org.kitesdk</groupId>
+      <artifactId>kite-morphlines-all</artifactId>
       <type>pom</type>
     </dependency>
     <dependency>

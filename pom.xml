@@ -41,7 +41,7 @@
     <version.zookeeper>${cdh.zookeeper.version}</version.zookeeper>
     <version.jackson>1.9.2</version.jackson>
     <version.httpclient>${cdh.httpcomponents.version}</version.httpclient>
-    <version.cdk>${cdh.cdk.version}</version.cdk>
+    <version.kite>${cdh.kite.version}</version.kite>
     <version.search>${cdh.search.version}</version.search>
 
     <!-- Tells maven plugins what file encoding to use -->
@@ -189,9 +189,9 @@
         <version>${project.version}</version>
       </dependency>
      <dependency>
-        <groupId>com.cloudera.cdk</groupId>
-        <artifactId>cdk-morphlines-all</artifactId>
-        <version>${version.cdk}</version>
+        <groupId>org.kitesdk</groupId>
+        <artifactId>kite-morphlines-all</artifactId>
+        <version>${version.kite}</version>
         <type>pom</type>
       </dependency>
       <dependency>

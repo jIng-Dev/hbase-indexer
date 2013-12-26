@@ -240,7 +240,7 @@ class HBaseIndexerArgumentParser {
                 .action(new HelpArgumentAction() {
                     @Override
                     public void run(ArgumentParser parser, Argument arg, Map<String, Object> attrs, String flag, Object value) throws ArgumentParserException {
-                      parser.printHelp(new PrintWriter(System.out));
+                      parser.printHelp(new PrintWriter(System.out, true));
                       System.out.println();
                       System.out.print(ForkedToolRunnerHelpFormatter.getGenericCommandUsage());
                       System.out.println("Examples: \n\n" +

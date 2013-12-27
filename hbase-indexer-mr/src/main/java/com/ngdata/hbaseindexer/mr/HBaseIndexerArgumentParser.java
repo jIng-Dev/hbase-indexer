@@ -92,7 +92,7 @@ class HBaseIndexerArgumentParser {
                         "Solr shards expected by the user, using a mapper-only job. This phase is omitted if the number of shards is " +
                         "already equal to the number of shards expected by the user\n\n" +
                         "4) Go-live phase: This optional (parallel) phase merges the output shards of the previous phase into a set of " +
-                        "live customer-facing Solr servers in SolrCloud. If this phase is omitted you can expecitly point each Solr " +
+                        "live customer-facing Solr servers in SolrCloud. If this phase is omitted you can explicitly point each Solr " +
                         "server to one of the HDFS output shard directories\n\n" +
                         "Fault Tolerance: Mapper and reducer task attempts are retried on failure per the standard MapReduce semantics. " + 
                         "On program startup all data in the --output-dir is deleted if that output directory already exists and " +

@@ -291,6 +291,25 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
     }
     
     @Test
+    public void testIndexer_MorphlinesWithOneReducerPerShard() throws Exception {
+        
+        File indexerConfigFile = MRTestUtil.substituteZkHost(
+            new File(Resources.getResource("morphline_indexer.xml").toURI()), SOLR_TEST_UTILITY.getZkConnectString());
+
+        MR_TEST_UTIL.runTool(
+            "--hbase-indexer-file", indexerConfigFile.toString(),
+            "--reducers", "-2",
+            "--fanout", "2",
+            "--zk-host", SOLR_ZK,
+            "--collection", "collection1",
+            "--log4j", new File(Resources.getResource("log4j-base.properties").toURI()).toString(),
+            "--go-live-threads", "999",
+            "--go-live");
+        
+        verifySolrContents();
+    }
+    
+    @Test
     public void testIndexer_WithUserSuppliedSolrDir() throws Exception {
 
         MR_TEST_UTIL.runTool(

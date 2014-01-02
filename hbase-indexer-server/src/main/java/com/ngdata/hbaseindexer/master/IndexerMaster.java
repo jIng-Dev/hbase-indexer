@@ -685,25 +685,18 @@ public class IndexerMaster {
         }
 
         private String jobStateToString(int jobState) {
-            String result = "unknown";
-            switch (jobState) {
-                case JobStatus.FAILED:
-                    result = "failed";
-                    break;
-                case JobStatus.KILLED:
-                    result = "killed";
-                    break;
-                case JobStatus.PREP:
-                    result = "prep";
-                    break;
-                case JobStatus.RUNNING:
-                    result = "running";
-                    break;
-                case JobStatus.SUCCEEDED:
-                    result = "succeeded";
-                    break;
+            if (jobState == JobStatus.FAILED) {
+                return "failed";
+            } else if (jobState == JobStatus.KILLED) {
+                return "killed";
+            } else if (jobState == JobStatus.PREP) {
+                return "prep";
+            } else if (jobState == JobStatus.RUNNING) {
+                return "running";
+            } else if (jobState == JobStatus.SUCCEEDED) {
+                return "succeeded";
             }
-            return result;
+            return "unknown";
         }
     }
 }

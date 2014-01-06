@@ -301,13 +301,6 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-        <version>${version.hbase94}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-server</artifactId>
         <version>${version.hbase95}</version>
       </dependency>

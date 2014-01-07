@@ -303,6 +303,12 @@
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-server</artifactId>
         <version>${version.hbase95}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>stax</groupId>
+            <artifactId>stax-api</artifactId> <!-- only necessay for Java < 6 -->
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -317,6 +323,12 @@
         <type>test-jar</type>
         <scope>test</scope>
         <version>${version.hbase95}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>stax</groupId>
+            <artifactId>stax-api</artifactId> <!-- only necessay for Java < 6 -->
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -578,6 +590,12 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${version.hadoop.hbase96}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>stax</groupId>
+                <artifactId>stax-api</artifactId> <!-- only necessay for Java < 6 -->
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>

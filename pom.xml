@@ -467,13 +467,6 @@
           <groupId>org.apache.hbase</groupId>
           <artifactId>hbase</artifactId>
         </dependency>
-
-        <dependency>
-          <groupId>org.apache.hbase</groupId>
-          <artifactId>hbase</artifactId>
-          <type>test-jar</type>
-          <scope>test</scope>
-        </dependency>
       </dependencies>
     </profile>
 

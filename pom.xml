@@ -39,7 +39,7 @@
     <version.hadoop.mr1.hbase96>${cdh.mr1.version}</version.hadoop.mr1.hbase96>
     <version.hadoop>${cdh.hadoop.version}</version.hadoop>
     <version.zookeeper>${cdh.zookeeper.version}</version.zookeeper>
-    <version.jackson>1.9.2</version.jackson>
+    <version.jackson>1.8.8</version.jackson>
     <version.httpclient>${cdh.httpcomponents.version}</version.httpclient>
     <version.kite>${cdh.kite.version}</version.kite>
     <version.search>${cdh.search.version}</version.search>

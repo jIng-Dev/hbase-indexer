@@ -824,7 +824,7 @@ public class ForkedMapReduceIndexerTool extends Configured implements Tool {
         String configName = zki.readConfigName(zkClient, options.collection);
         File tmpSolrHomeDir = zki.downloadConfigDir(zkClient, configName);
         SolrOutputFormat.setupSolrHomeCache(tmpSolrHomeDir, job);
-        System.out.println("Using " + tmpSolrHomeDir + " as solr home");
+        LOG.debug("Using " + tmpSolrHomeDir + " as solr home");
         options.solrHomeDir = tmpSolrHomeDir;
       } finally {
         zkClient.close();

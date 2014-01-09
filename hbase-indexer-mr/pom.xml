@@ -54,6 +54,13 @@
     <dependency>
       <groupId>com.ngdata</groupId>
       <artifactId>hbase-indexer-morphlines</artifactId>
+      <exclusions>
+        <exclusion>
+          <!-- CDH-16644: no need for startReportingMetricsToHTTP command from kite-morphlines-metrics-servlets -->
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-servlet</artifactId> 
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.cloudera.search</groupId>

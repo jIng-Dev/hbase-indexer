@@ -295,7 +295,7 @@
         <exclusions>
           <exclusion>
             <groupId>stax</groupId>
-            <artifactId>stax-api</artifactId> <!-- only necessay for Java < 6 -->
+            <artifactId>stax-api</artifactId> <!-- only necessary for Java < 6 -->
           </exclusion>
         </exclusions>
       </dependency>
@@ -306,7 +306,7 @@
         <exclusions>
           <exclusion>
             <groupId>stax</groupId>
-            <artifactId>stax-api</artifactId> <!-- only necessay for Java < 6 -->
+            <artifactId>stax-api</artifactId> <!-- only necessary for Java < 6 -->
           </exclusion>
         </exclusions>
       </dependency>
@@ -326,7 +326,7 @@
         <exclusions>
           <exclusion>
             <groupId>stax</groupId>
-            <artifactId>stax-api</artifactId> <!-- only necessay for Java < 6 -->
+            <artifactId>stax-api</artifactId> <!-- only necessary for Java < 6 -->
           </exclusion>
         </exclusions>
       </dependency>
@@ -586,7 +586,7 @@
             <exclusions>
               <exclusion>
                 <groupId>stax</groupId>
-                <artifactId>stax-api</artifactId> <!-- only necessay for Java < 6 -->
+                <artifactId>stax-api</artifactId> <!-- only necessary for Java < 6 -->
               </exclusion>
             </exclusions>
           </dependency>

@@ -230,6 +230,7 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
     protected void map(ImmutableBytesWritable key, Result result, Context context) throws IOException,
             InterruptedException {
 
+        context.progress();
         context.getCounter(HBaseIndexerCounters.INPUT_ROWS).increment(1L);
         try {
             indexer.indexRowData(ImmutableList.<RowData>of(new ResultWrappingRowData(result)));

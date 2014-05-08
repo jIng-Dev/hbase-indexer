@@ -181,7 +181,7 @@ class HBaseIndexingOptions extends OptionsBridge {
             HBaseAdmin admin = getHbaseAdmin();
             tables = admin.listTables(indexerConf.getTable());
         } catch (IOException e) {
-            new RuntimeException("Error occurred fetching hbase tables", e);
+            throw new RuntimeException("Error occurred fetching hbase tables", e);
         }
         for (HTableDescriptor descriptor : tables) {
             Scan hbaseScan = new Scan();

@@ -27,6 +27,9 @@
       <outputDirectory>lib</outputDirectory>
       <excludes>
         <exclude>${groupId}:${artifactId}</exclude>
+        <!-- CDH-19032: HBase batch indexing jobs sometimes fail with MR errors in the log (Avoid bundling jasper jar's) -->
+        <exclude>tomcat:jasper-compiler</exclude>
+        <exclude>tomcat:jasper-runtime</exclude>
       </excludes>
     </dependencySet>
     <dependencySet>

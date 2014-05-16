@@ -55,7 +55,7 @@ public class XmlIndexerConfWriter {
 
         Element indexerEl = document.createElement("indexer");
         document.appendChild(indexerEl);
-        indexerEl.setAttribute("table", conf.getTable());
+        indexerEl.setAttribute("table", createTableValue(conf));
         if (conf.getMappingType() != null) indexerEl.setAttribute("mapping-type",
                 conf.getMappingType().toString().toLowerCase());
         if (conf.getRowReadMode() != null) indexerEl.setAttribute("read-row",
@@ -102,6 +102,14 @@ public class XmlIndexerConfWriter {
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", String.valueOf(4));
         transformer.transform(new DOMSource(document), new StreamResult(os));
 
+    }
+
+    private static String createTableValue(IndexerConf conf) {
+        if (conf.tableNameIsRegex()) {
+            return String.format("regex:%s", conf.getTable());
+        } else {
+            return conf.getTable();
+        }
     }
 
     private static void addParams(Map<String,String> params, Element element) {

@@ -35,6 +35,7 @@ import com.ngdata.hbaseindexer.uniquekey.UniqueKeyFormatter;
  */
 public class IndexerConf {
     private String table;
+    private boolean tableNameIsRegex;
     private MappingType mappingType;
     private RowReadMode rowReadMode;
     private String uniqueKeyField;
@@ -75,12 +76,46 @@ public class IndexerConf {
     public static final String DEFAULT_FIELD_TYPE = "string";
     public static final String DEFAULT_EXTRACT_TYPE = "application/octet-stream";
 
+    /**
+     * Instantiate with a table name expression. The table name expression can be the simple name of a table, or it
+     * can take one of the following forms:
+     * <ul>
+     *     <li>regex:table.*name - a regular expression to be applied to table names</li>
+     *     <li>literal:tablename - a qualified literal expression, technically the same as just specifying
+     *     "tablename"</li>
+     * </ul>
+     *
+     * @param table the table name expression for the indexer configuration
+     */
     IndexerConf(String table) {
-        this.table = table;
+        if (table.startsWith("regex:")) {
+            this.table = table.substring("regex:".length());
+            this.tableNameIsRegex = true;
+        } else if (table.startsWith("literal:")) {
+            this.table = table.substring("literal:".length());
+        } else {
+            this.table = table;
+        }
     }
 
+    /**
+     * Returns the name of the table that this indexer is to be applied to. This may be a regular expression to match
+     * multiple table names -- this condition can be checked with {@link #tableNameIsRegex()}.
+     *
+     * @return the name of the table that this indexer is to be applied to
+     */
     public String getTable() {
         return table;
+    }
+
+    /**
+     * Determine if the table name in this configuration is a regular expression to be applied to multiple table names,
+     * or just a simple single table name.
+     *
+     * @return {@code true} if the table name is a regular expression, otherwise {@code false}
+     */
+    public boolean tableNameIsRegex() {
+        return tableNameIsRegex;
     }
 
     public MappingType getMappingType() {
@@ -150,7 +185,7 @@ public class IndexerConf {
         this.rowReadMode = rowReadMode;
     }
     
-     void setMapperClass(Class<? extends ResultToSolrMapper> mapperClass) {
+    void setMapperClass(Class<? extends ResultToSolrMapper> mapperClass) {
         this.mapperClass = mapperClass;
     }
 

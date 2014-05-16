@@ -178,12 +178,11 @@ class HBaseIndexingOptions extends OptionsBridge {
         applyMorphLineParams(indexerConf);
         List<byte[]> tableNames = Lists.newArrayList();
         String tableNameSpec = indexerConf.getTable();
-        if (tableNameSpec.startsWith("regex:")) {
-            String tableNameRegex = tableNameSpec.substring("regex:".length());
+        if (indexerConf.tableNameIsRegex()) {
             HTableDescriptor[] tables;
             try {
                 HBaseAdmin admin = getHbaseAdmin();
-                tables = admin.listTables(tableNameRegex);
+                tables = admin.listTables(tableNameSpec);
             } catch (IOException e) {
                 throw new RuntimeException("Error occurred fetching hbase tables", e);
             }
@@ -191,13 +190,7 @@ class HBaseIndexingOptions extends OptionsBridge {
                 tableNames.add(descriptor.getName());
             }
         } else {
-            String tableNameLiteral;
-            if (tableNameSpec.startsWith("literal:")) {
-                tableNameLiteral = tableNameSpec.substring("literal:".length());
-            } else {
-                tableNameLiteral = tableNameSpec; // to retain backwards compatibility
-            }
-            tableNames.add(Bytes.toBytesBinary(tableNameLiteral));
+            tableNames.add(Bytes.toBytesBinary(tableNameSpec));
         }
         
         for (byte[] tableName : tableNames) {

@@ -35,6 +35,7 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * SEP {@code EventListener} that sends all events through an {@link Indexer}
@@ -54,22 +55,33 @@ public class IndexingEventListener implements EventListener {
      * 
      * @param indexer indexer engine that will create index documents from incoming event data
      * @param targetTableNameExpression name of the table for which updates are to be indexed
+     * @param targetTableIsRegex flag to determine if the table name expression is a regular expression or not
      */
-    public IndexingEventListener(Indexer indexer, final String targetTableNameExpression) {
+    public IndexingEventListener(Indexer indexer, final String targetTableNameExpression, boolean targetTableIsRegex) {
         this.indexer = indexer;
         incomingEventsMeter = Metrics.newMeter(metricName(getClass(), "Incoming events", indexer.getName()),
                 "Rate of incoming SEP events", TimeUnit.SECONDS);
         applicableEventsMeter = Metrics.newMeter(metricName(getClass(), "Applicable events", indexer.getName()),
                 "Rate of incoming SEP events that are considered applicable", TimeUnit.SECONDS);
 
-        final Pattern tableNamePattern = Pattern.compile(targetTableNameExpression);
-        tableEqualityPredicate = new Predicate<SepEvent>() {
+        if (targetTableIsRegex) {
+            final Pattern tableNamePattern = Pattern.compile(targetTableNameExpression);
+            tableEqualityPredicate = new Predicate<SepEvent>() {
 
-            @Override
-            public boolean apply(@Nullable SepEvent event) {
-                return tableNamePattern.matcher(new String(event.getTable(), Charsets.UTF_8)).matches();
-            }
-        };
+                @Override
+                public boolean apply(@Nullable SepEvent event) {
+                    return tableNamePattern.matcher(new String(event.getTable(), Charsets.UTF_8)).matches();
+                }
+            };
+        } else {
+            final byte[] tableNameBytes = Bytes.toBytes(targetTableNameExpression);
+            tableEqualityPredicate = new Predicate<SepEvent>() {
+                @Override
+                public boolean apply(@Nullable SepEvent event) {
+                    return Bytes.equals(tableNameBytes, event.getTable());
+                }
+            };
+        }
 
     }
 

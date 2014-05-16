@@ -228,7 +228,7 @@ public class IndexerSupervisor {
             Indexer indexer = Indexer.createIndexer(indexerDef.getName(), indexerConf, indexerConf.getTable(),
                     mapper, htablePool, sharder, solrWriter);
             IndexingEventListener eventListener = new IndexingEventListener(
-                    indexer, indexerConf.getTable());
+                    indexer, indexerConf.getTable(), indexerConf.tableNameIsRegex());
 
             int threads = hbaseConf.getInt("hbaseindexer.indexer.threads", 10);
             SepConsumer sepConsumer = new SepConsumer(indexerDef.getSubscriptionId(),

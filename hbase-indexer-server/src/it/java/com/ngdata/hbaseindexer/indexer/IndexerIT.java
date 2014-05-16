@@ -228,6 +228,44 @@ public class IndexerIT {
     }
 
     @Test
+    public void testBasicScenario_RegexTableExpression() throws Exception {
+        // Create a table in HBase
+        createTable("table1", "family1");
+
+        // Add an indexer
+        WriteableIndexerModel indexerModel = main.getIndexerModel();
+        IndexerDefinition indexerDef = new IndexerDefinitionBuilder()
+                .name("indexer1")
+                .configuration(
+                        Bytes.toBytes("<indexer table='regex:table\\d+'><field name='field1_s' " +
+                                              "value='family1:qualifier1'/></indexer>"))
+                .connectionType("solr")
+                .connectionParams(ImmutableMap.of("solr.zk", solrTestingUtility.getZkConnectString(),
+                                                  "solr.collection", "collection1"))
+                .build();
+
+        indexerModel.addIndexer(indexerDef);
+
+        // Ingest
+        HTable table = new HTable(conf, "table1");
+        Put put = new Put(b("row1"));
+        put.add(b("family1"), b("qualifier1"), b("value1"));
+        table.put(put);
+
+        // Commit Solr index and check data is present
+        waitForSolrDocumentCount(1);
+
+        // Delete
+        Delete delete = new Delete(b("row1"));
+        table.delete(delete);
+        table.delete(delete);
+
+        waitForSolrDocumentCount(0);
+
+        table.close();
+    }
+
+    @Test
     public void testIndexerDefinitionChangesPickedUp() throws Exception {
         createTable("table1", "family1");
 

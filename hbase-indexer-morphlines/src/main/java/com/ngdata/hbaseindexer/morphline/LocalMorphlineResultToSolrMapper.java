@@ -147,12 +147,17 @@ final class LocalMorphlineResultToSolrMapper implements ResultToSolrMapper, Conf
             byte[] columnFamily = extractor.getColumnFamily();
             byte[] columnQualifier = extractor.getColumnQualifier();
             if (columnFamily != null) {
-                if (columnQualifier != null) {
-                    get.addColumn(columnFamily, columnQualifier);
-                } else {
-                    get.addFamily(columnFamily);
-                }
-            }
+              if (columnQualifier != null) {
+                  if (get.getFamilyMap().containsKey(columnFamily) && 
+                      get.getFamilyMap().get(columnFamily) == null) {
+                      ; // do nothing to honour pre-existing request to fetch all columns from that family  
+                  } else {
+                      get.addColumn(columnFamily, columnQualifier);
+                  }
+              } else {
+                  get.addFamily(columnFamily);
+              }
+          }
         }
         this.familyMap = get.getFamilyMap();
 

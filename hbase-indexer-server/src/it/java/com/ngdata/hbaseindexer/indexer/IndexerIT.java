@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.collect.ImmutableMap;
@@ -41,6 +42,7 @@ import com.ngdata.hbaseindexer.util.net.NetUtils;
 import com.ngdata.hbaseindexer.util.solr.SolrTestingUtility;
 import com.ngdata.sep.impl.SepReplicationSource;
 import com.ngdata.sep.impl.SepTestUtil;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -675,7 +677,7 @@ public class IndexerIT {
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1' mapper='" + MorphlineResultToSolrMapper.class.getName() + "'>");
         indexerConf.append("  <param name='morphlineFile'" +
-        		" value='../hbase-indexer-morphlines/src/test/resources/test-morphlines/extractHBaseCell.conf'/>");
+            " value='../hbase-indexer-morphlines/src/test/resources/test-morphlines/extractHBaseCell.conf'/>");
         indexerConf.append("</indexer>");
 
         createIndexer1(indexerConf.toString());
@@ -693,6 +695,39 @@ public class IndexerIT {
         assertEquals(1, response.getResults().size());
         SolrDocument doc = response.getResults().get(0);
         assertEquals("4279", doc.getFirstValue("field1_s"));
+
+        table.close();
+    }
+
+    @Test
+    public void testMorphlineWithWildcardInputFieldMix() throws Exception {
+        createTable("table1", "family1");
+
+        HTable table = new HTable(conf, "table1");
+
+        StringBuilder indexerConf = new StringBuilder();
+        indexerConf.append("<indexer table='table1' mapper='" + MorphlineResultToSolrMapper.class.getName() + "'>");
+        indexerConf.append("  <param name='morphlineFile'" +
+            " value='../hbase-indexer-morphlines/src/test/resources/test-morphlines/extractHBaseCellWithWildcardInputFieldMix.conf'/>");
+        indexerConf.append("</indexer>");
+
+        createIndexer1(indexerConf.toString());
+
+        SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
+
+        Put put = new Put(Bytes.toBytes("cry baby"));
+        put.add(b("family1"), b("field1"), Bytes.toBytes(4279));
+        put.add(b("family1"), b("field0"), Bytes.toBytes(1234));
+        table.put(put);
+
+        SepTestUtil.waitOnReplication(conf, 60000L);
+
+        collection1.commit();
+        QueryResponse response = collection1.query(new SolrQuery("*:*"));
+        assertEquals(1, response.getResults().size());
+        SolrDocument doc = response.getResults().get(0);
+        assertEquals("4279", doc.getFirstValue("field1_s"));
+        assertEquals(Arrays.asList("1234", "4279"), doc.getFieldValues("field0_ss"));
 
         table.close();
     }

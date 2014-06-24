@@ -27,6 +27,8 @@ import com.ngdata.hbaseindexer.model.impl.IndexerModelImpl;
 import com.ngdata.sep.util.io.Closer;
 import com.ngdata.sep.util.zookeeper.ZkUtil;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -34,6 +36,7 @@ import org.junit.Test;
 
 import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -55,6 +58,7 @@ public class IndexerModelImplTest {
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         ZK_DIR = new File(System.getProperty("java.io.tmpdir") + File.separator + "hbaseindexer.zklocktest");
+        FileUtils.deleteDirectory(ZK_DIR);
         ZK_CLIENT_PORT = getFreePort();
 
         ZK_CLUSTER = new MiniZooKeeperCluster();

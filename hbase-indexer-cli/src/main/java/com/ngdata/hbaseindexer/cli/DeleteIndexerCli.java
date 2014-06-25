@@ -64,6 +64,7 @@ public class DeleteIndexerCli extends BaseIndexCli {
                 return;
             case DELETE_REQUESTED:
             case DELETING:
+            case ACTIVE:
                 System.out.print(".");
                 Thread.sleep(500);
                 continue;

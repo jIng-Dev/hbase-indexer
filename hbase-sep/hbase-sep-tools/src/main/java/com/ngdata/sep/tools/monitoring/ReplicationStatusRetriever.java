@@ -37,6 +37,7 @@ import com.google.common.collect.Maps;
 import com.ngdata.sep.tools.monitoring.ReplicationStatus.HLogInfo;
 import com.ngdata.sep.tools.monitoring.ReplicationStatus.Status;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -44,6 +45,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -68,7 +70,7 @@ public class ReplicationStatusRetriever {
     private final Path hbaseOldLogDir;
     public static final int HBASE_JMX_PORT = 10102;
 
-    public ReplicationStatusRetriever(ZooKeeperItf zk, int hbaseMasterPort) throws InterruptedException, IOException, KeeperException {
+    public ReplicationStatusRetriever(ZooKeeperItf zk, int hbaseMasterPort) throws InterruptedException, IOException, KeeperException, DeserializationException {
         this.zk = zk;
         
         Configuration conf = getHBaseConf(zk, hbaseMasterPort);
@@ -83,11 +85,11 @@ public class ReplicationStatusRetriever {
         hbaseOldLogDir = new Path(hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     }
 
-    private Configuration getHBaseConf(ZooKeeperItf zk, int hbaseMasterPort) throws KeeperException, InterruptedException, IOException {
+    private Configuration getHBaseConf(ZooKeeperItf zk, int hbaseMasterPort) throws KeeperException, InterruptedException, IOException, DeserializationException {
         // Read the HBase/Hadoop configuration via the master web ui
         // This is debatable, but it avoids any pitfalls with conf dirs and also works with launch-test-lily
         byte[] masterServerName = removeMetaData(zk.getData("/hbase/master", false, new Stat()));
-        String hbaseMasterHostName = ServerName.parseVersionedServerName(masterServerName).getHostname();
+        String hbaseMasterHostName = ServerName.parseFrom(masterServerName).getHostname();
         
 
         String url = String.format("http://%s:%d/conf", hbaseMasterHostName, hbaseMasterPort);

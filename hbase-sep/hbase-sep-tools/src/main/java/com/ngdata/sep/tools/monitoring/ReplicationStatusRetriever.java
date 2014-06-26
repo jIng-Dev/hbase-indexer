@@ -20,6 +20,8 @@ import com.ngdata.sep.impl.HBaseShims;
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.List;
@@ -33,10 +35,12 @@ import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.ngdata.sep.tools.monitoring.ReplicationStatus.HLogInfo;
 import com.ngdata.sep.tools.monitoring.ReplicationStatus.Status;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -44,7 +48,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.http.HttpEntity;
@@ -87,8 +90,7 @@ public class ReplicationStatusRetriever {
         // Read the HBase/Hadoop configuration via the master web ui
         // This is debatable, but it avoids any pitfalls with conf dirs and also works with launch-test-lily
         byte[] masterServerName = removeMetaData(zk.getData("/hbase/master", false, new Stat()));
-        String hbaseMasterHostName = ServerName.parseVersionedServerName(masterServerName).getHostname();
-        
+        String hbaseMasterHostName = getServerName(masterServerName).getHostname();        
 
         String url = String.format("http://%s:%d/conf", hbaseMasterHostName, hbaseMasterPort);
         System.out.println("Reading HBase configuration from " + url);
@@ -98,6 +100,39 @@ public class ReplicationStatusRetriever {
         conf.addResource(new ByteArrayInputStream(data));
 
         return conf;
+    }
+
+    private ServerName getServerName(byte[] masterServerName) {
+      Method method;
+      try {
+        // this method is available for hbase-0.96 and above
+        method = ServerName.class.getMethod("parseFrom", byte[].class);
+        Preconditions.checkNotNull(method);
+      } catch (SecurityException e) {
+        method = null;
+      } catch (NoSuchMethodException e) {
+        method = null;
+      }
+      
+      ServerName serverName;
+      if (method != null) {
+        // this is correct for hbase-0.96 and above 
+        try {
+          serverName = (ServerName) method.invoke(null, masterServerName);
+          Preconditions.checkNotNull(serverName);
+        } catch (IllegalArgumentException e) {
+          throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        // this is correct for hbase-0.94 and below
+        serverName = ServerName.parseVersionedServerName(masterServerName);
+        Preconditions.checkNotNull(serverName);
+      }
+      return serverName;
     }
 
     private byte[] readUrl(String url) throws IOException {

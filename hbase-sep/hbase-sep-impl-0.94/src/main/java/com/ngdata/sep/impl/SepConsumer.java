@@ -170,6 +170,9 @@ public class SepConsumer extends BaseHRegionServer {
             }
         }
         sepMetrics.shutdown();
+        for (ThreadPoolExecutor executor : executors) {
+            executor.shutdown();
+        }
     }
 
     public boolean isRunning() {

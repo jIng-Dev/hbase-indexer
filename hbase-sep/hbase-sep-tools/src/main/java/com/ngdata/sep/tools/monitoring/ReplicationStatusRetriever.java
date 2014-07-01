@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -203,7 +204,7 @@ public class ReplicationStatusRetriever {
                         long position = -1;
                         if (data != null && data.length > 0) {
                             data = removeMetaData(data);
-                            position = Long.parseLong(new String(data, "UTF-8"));
+                            position = ZKUtil.parseHLogPositionFrom(data); // CDH-17163
                         }
 
                         HLogInfo hlogInfo = new HLogInfo(log);

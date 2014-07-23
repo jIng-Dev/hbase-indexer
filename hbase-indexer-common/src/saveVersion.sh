@@ -29,7 +29,10 @@ sourceRoot=$3
 user=`whoami`
 date=`date`
 cwd=`pwd`
-if [ -d $sourceRoot/.svn ]; then
+if [ -n "${COMPONENT_HASH}" ]; then
+  revision="${COMPONENT_HASH}"
+  url="http://github.com/cloudera/hbase-indexer"
+elif [ -d $sourceRoot/.svn ]; then
   revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
   url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
 elif [ -d $sourceRoot/.git ]; then

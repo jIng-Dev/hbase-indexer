@@ -23,6 +23,7 @@ import com.ngdata.hbaseindexer.model.api.IndexerNotFoundException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import org.apache.zookeeper.KeeperException;
 
 public class DeleteIndexerCli extends BaseIndexCli {
 
@@ -47,12 +48,12 @@ public class DeleteIndexerCli extends BaseIndexCli {
         return parser;
     }
 
-    private void waitForDeletion(String indexerName) throws InterruptedException {
+    private void waitForDeletion(String indexerName) throws InterruptedException, KeeperException {
         System.out.printf("Deleting indexer '%s'", indexerName);
         while (model.hasIndexer(indexerName)) {
-            IndexerDefinition indexerDef = null;
+            IndexerDefinition indexerDef;
             try {
-                indexerDef = model.getIndexer(indexerName);
+                indexerDef = model.getFreshIndexer(indexerName);
             } catch (IndexerNotFoundException e) {
                 // The indexer was deleted between the call to hasIndexer and getIndexer, that's ok
                 break;
@@ -64,7 +65,6 @@ public class DeleteIndexerCli extends BaseIndexCli {
                 return;
             case DELETE_REQUESTED:
             case DELETING:
-            case ACTIVE:
                 System.out.print(".");
                 Thread.sleep(500);
                 continue;

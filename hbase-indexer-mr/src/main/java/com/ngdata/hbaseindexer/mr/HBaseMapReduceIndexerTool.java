@@ -55,6 +55,7 @@ import org.apache.solr.client.solrj.impl.CloudSolrServer;
 import org.apache.solr.hadoop.ForkedMapReduceIndexerTool;
 import org.apache.solr.hadoop.SolrInputDocumentWritable;
 import org.apache.solr.hadoop.Utils;
+import org.apache.solr.security.util.job.JobSecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -169,20 +170,25 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
             CloudSolrServer solrServer = new CloudSolrServer(hbaseIndexingOpts.zkHost);
             solrServer.setDefaultCollection(hbaseIndexingOpts.collection);
 
-            if (hbaseIndexingOpts.clearIndex) {
-                clearSolr(indexingSpec.getIndexConnectionParams());
-            }
+            JobSecurityUtil.initCredentials(solrServer, job, hbaseIndexingOpts.zkHost);
+            try {
+              if (hbaseIndexingOpts.clearIndex) {
+                  clearSolr(indexingSpec.getIndexConnectionParams());
+              }
 
-            // Run a mapper-only MR job that sends index documents directly to a live Solr instance.
-            job.setOutputFormatClass(NullOutputFormat.class);
-            job.setNumReduceTasks(0);
-            job.submit();
-            callback.jobStarted(job.getJobID().toString(), job.getTrackingURL());
-            if (!ForkedMapReduceIndexerTool.waitForCompletion(job, hbaseIndexingOpts.isVerbose)) {
-                return -1; // job failed
+              // Run a mapper-only MR job that sends index documents directly to a live Solr instance.
+              job.setOutputFormatClass(NullOutputFormat.class);
+              job.setNumReduceTasks(0);
+              job.submit();
+              callback.jobStarted(job.getJobID().toString(), job.getTrackingURL());
+              if (!ForkedMapReduceIndexerTool.waitForCompletion(job, hbaseIndexingOpts.isVerbose)) {
+                  return -1; // job failed
+              }
+              commitSolr(indexingSpec.getIndexConnectionParams());
+              ForkedMapReduceIndexerTool.goodbye(job, programStartTime);
+            } finally {
+              JobSecurityUtil.cleanupCredentials(solrServer, job, hbaseIndexingOpts.zkHost);
             }
-            commitSolr(indexingSpec.getIndexConnectionParams());
-            ForkedMapReduceIndexerTool.goodbye(job, programStartTime);
             return 0;
         } else {
             FileSystem fileSystem = FileSystem.get(getConf());

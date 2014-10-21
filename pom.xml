@@ -241,6 +241,11 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>org.apache.solr</groupId>
+        <artifactId>solr-security-util</artifactId>
+        <version>${version.solr}</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
         <version>${version.zookeeper}</version>

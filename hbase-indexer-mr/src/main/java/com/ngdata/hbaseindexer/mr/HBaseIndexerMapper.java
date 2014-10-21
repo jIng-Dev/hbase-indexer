@@ -46,6 +46,7 @@ import org.apache.solr.client.solrj.impl.CloudSolrServer;
 import org.apache.solr.hadoop.SolrInputDocumentWritable;
 import org.apache.solr.hadoop.SolrOutputFormat;
 import org.apache.solr.hadoop.Utils;
+import org.apache.solr.security.util.job.JobSecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -228,6 +229,8 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
         } catch (SharderException e) {
             throw new RuntimeException(e);
         }
+
+        JobSecurityUtil.loadCredentialsForClients(context, indexConnectionParams.get(SolrConnectionParams.ZOOKEEPER));
     }
 
     private Indexer createIndexer(String indexName, Context context, IndexerConf indexerConf, String tableName,

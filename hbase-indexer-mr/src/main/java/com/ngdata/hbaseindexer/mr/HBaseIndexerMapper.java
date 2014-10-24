@@ -230,7 +230,10 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
             throw new RuntimeException(e);
         }
 
-        JobSecurityUtil.loadCredentialsForClients(context, indexConnectionParams.get(SolrConnectionParams.ZOOKEEPER));
+        String zkHost = indexConnectionParams.get(SolrConnectionParams.ZOOKEEPER);
+        if (zkHost != null) {
+          JobSecurityUtil.loadCredentialsForClients(context, zkHost);
+        }
     }
 
     private Indexer createIndexer(String indexName, Context context, IndexerConf indexerConf, String tableName,

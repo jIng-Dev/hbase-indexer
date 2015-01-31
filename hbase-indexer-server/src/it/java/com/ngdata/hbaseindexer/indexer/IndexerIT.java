@@ -40,7 +40,6 @@ import com.ngdata.hbaseindexer.model.api.WriteableIndexerModel;
 import com.ngdata.hbaseindexer.morphline.MorphlineResultToSolrMapper;
 import com.ngdata.hbaseindexer.util.net.NetUtils;
 import com.ngdata.hbaseindexer.util.solr.SolrTestingUtility;
-import com.ngdata.sep.impl.SepReplicationSource;
 import com.ngdata.sep.impl.SepTestUtil;
 
 import org.apache.hadoop.conf.Configuration;
@@ -101,7 +100,7 @@ public class IndexerIT {
         // The following are the standard settings that for hbase regionserver when using the SEP (see SEP docs)
         conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
         conf.setLong("replication.source.sleepforretries", 50);
-        conf.set("replication.replicationsource.implementation", SepReplicationSource.class.getName());
+//        conf.set("replication.replicationsource.implementation", SepReplicationSource.class.getName());
         conf.setInt("hbase.master.info.port", -1);
         conf.setInt("hbase.regionserver.info.port", -1);
 

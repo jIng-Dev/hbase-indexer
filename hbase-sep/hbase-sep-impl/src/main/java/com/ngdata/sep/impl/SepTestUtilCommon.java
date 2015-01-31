@@ -105,6 +105,7 @@ public class SepTestUtilCommon {
             }
             throw new Exception("Replication processing not finished with timeout " + timeout);
         }
+        Thread.sleep(2000); // work-around for MBean logQSize attribute not being updated properly by HBase
     }
 
     /**

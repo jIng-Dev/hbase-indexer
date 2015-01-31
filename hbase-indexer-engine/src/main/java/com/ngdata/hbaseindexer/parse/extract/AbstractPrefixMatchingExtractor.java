@@ -22,6 +22,8 @@ import java.util.NavigableMap;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.ngdata.hbaseindexer.parse.ByteArrayExtractor;
+
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,7 +48,7 @@ public abstract class AbstractPrefixMatchingExtractor implements ByteArrayExtrac
 
     /**
      * Extract a value from a {@code KeyValue}. What portion of the KeyValue to be fetched is implementation-specific.
-     * 
+     *
      * @param keyValue source for the extraction
      * @return extracted value, or null if no value can be extracted
      */
@@ -68,10 +70,10 @@ public abstract class AbstractPrefixMatchingExtractor implements ByteArrayExtrac
         }
         return values;
     }
-    
+
     @Override
     public boolean isApplicable(KeyValue keyValue) {
-        return keyValue.matchingFamily(columnFamily) && Bytes.startsWith(keyValue.getQualifier(), prefix);
+        return CellUtil.matchingFamily(keyValue, columnFamily) && Bytes.startsWith(keyValue.getQualifier(), prefix);
     }
 
     @Override
@@ -83,7 +85,7 @@ public abstract class AbstractPrefixMatchingExtractor implements ByteArrayExtrac
     public byte[] getColumnQualifier() {
         return null;
     }
-    
+
     @Override
     public boolean containsTarget(Result result) {
         // We're matching multiple potential inputs, so we can never be sure if all possibly-matching situations

@@ -74,14 +74,14 @@ public class ReplicationStatusRetriever {
 
     public ReplicationStatusRetriever(ZooKeeperItf zk, int hbaseMasterPort) throws InterruptedException, IOException, KeeperException {
         this.zk = zk;
-        
+
         Configuration conf = getHBaseConf(zk, hbaseMasterPort);
 
         if (!"true".equalsIgnoreCase(conf.get("hbase.replication"))) {
             throw new RuntimeException("HBase replication is not enabled.");
         }
 
-        
+
         fileSystem = FileSystem.get(conf);
         hbaseRootDir = FSUtils.getRootDir(conf);
         hbaseOldLogDir = new Path(hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
@@ -91,7 +91,7 @@ public class ReplicationStatusRetriever {
         // Read the HBase/Hadoop configuration via the master web ui
         // This is debatable, but it avoids any pitfalls with conf dirs and also works with launch-test-lily
         byte[] masterServerName = removeMetaData(zk.getData("/hbase/master", false, new Stat()));
-        String hbaseMasterHostName = getServerName(masterServerName).getHostname();        
+        String hbaseMasterHostName = getServerName(masterServerName).getHostname();
 
         String url = String.format("http://%s:%d/conf", hbaseMasterHostName, hbaseMasterPort);
         System.out.println("Reading HBase configuration from " + url);
@@ -114,10 +114,10 @@ public class ReplicationStatusRetriever {
       } catch (NoSuchMethodException e) {
         method = null;
       }
-      
+
       ServerName serverName;
       if (method != null) {
-        // this is correct for hbase-0.96 and above 
+        // this is correct for hbase-0.96 and above
         try {
           serverName = (ServerName) method.invoke(null, masterServerName);
           Preconditions.checkNotNull(serverName);
@@ -204,7 +204,7 @@ public class ReplicationStatusRetriever {
                         long position = -1;
                         if (data != null && data.length > 0) {
                             data = removeMetaData(data);
-                            position = ZKUtil.parseHLogPositionFrom(data); // CDH-17163
+                            position = ZKUtil.parseWALPositionFrom(data); // CDH-17163
                         }
 
                         HLogInfo hlogInfo = new HLogInfo(log);
@@ -231,9 +231,10 @@ public class ReplicationStatusRetriever {
 
                 MBeanServerConnection connection = jmxConnections.getConnector(hostName, HBASE_JMX_PORT).getMBeanServerConnection();
 
-                ObjectName replSourceBean = new ObjectName("hadoop:service=Replication,name=ReplicationSource for " + URLEncoder.encode(peerId, "UTF8"));
+                ObjectName replSourceBean = new ObjectName("Hadoop:service=HBase,name=RegionServer,sub=Replication");
+
                 try {
-                    status.ageOfLastShippedOp = (Long)connection.getAttribute(replSourceBean, "ageOfLastShippedOp");
+                    status.ageOfLastShippedOp = (Long)connection.getAttribute(replSourceBean, "source." + URLEncoder.encode(peerId, "UTF8") + ".ageOfLastShippedOp");
                 } catch (AttributeNotFoundException e) {
                     // could be the case if the queue disappeared since we read info from ZK
                 } catch (InstanceNotFoundException e) {

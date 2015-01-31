@@ -20,6 +20,8 @@ import java.util.Collections;
 
 import com.google.common.collect.Lists;
 import com.ngdata.hbaseindexer.parse.ByteArrayExtractor;
+
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 
@@ -45,20 +47,20 @@ public class SingleCellExtractor implements ByteArrayExtractor {
             return Lists.newArrayList(bytes);
         }
     }
-    
+
     @Override
     public byte[] getColumnFamily() {
         return columnFamily;
     }
-    
+
     @Override
     public byte[] getColumnQualifier() {
         return columnQualifier;
     }
-    
+
     @Override
     public boolean isApplicable(KeyValue keyValue) {
-        return keyValue.matchingColumn(columnFamily, columnQualifier);
+        return CellUtil.matchingColumn(keyValue, columnFamily, columnQualifier);
     }
 
     @Override

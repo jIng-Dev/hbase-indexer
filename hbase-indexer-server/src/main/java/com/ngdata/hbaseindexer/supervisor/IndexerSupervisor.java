@@ -207,7 +207,7 @@ public class IndexerSupervisor {
                 Map<String, String> connectionParams = indexerDef.getConnectionParams();
                 String solrMode = SolrConnectionParamUtil.getSolrMode(connectionParams);
                 if (solrMode.equals("cloud")) {
-                    solrWriter = new DirectSolrInputDocumentWriter(indexerDef.getName(), createCloudSolrServer(connectionParams));
+                    solrWriter = new DirectSolrInputDocumentWriter(indexerDef.getName(), createCloudSolrServer(connectionParams, indexerConf.getUniqueKeyField()));
                 } else if (solrMode.equals("classic")) {
                     connectionManager = new PoolingClientConnectionManager();
                     connectionManager.setDefaultMaxPerRoute(getSolrMaxConnectionsPerRoute(connectionParams));

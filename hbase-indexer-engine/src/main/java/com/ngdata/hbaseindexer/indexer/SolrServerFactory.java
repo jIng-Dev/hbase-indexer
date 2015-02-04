@@ -21,9 +21,11 @@ import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.ngdata.hbaseindexer.SolrConnectionParams;
 import com.ngdata.hbaseindexer.util.solr.SolrConnectionParamUtil;
+
 import org.apache.http.client.HttpClient;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.impl.CloudSolrServer;
@@ -33,11 +35,13 @@ import org.apache.solr.client.solrj.impl.HttpSolrServer;
  * Create cloud or classic {@link SolrServer} instances from a map of solr connection parameters.
  */
 public class SolrServerFactory {
-    public static SolrServer createCloudSolrServer(Map<String, String> connectionParameters) throws MalformedURLException {
+    public static SolrServer createCloudSolrServer(Map<String, String> connectionParameters, String uniqueKeyField) throws MalformedURLException {
+        Preconditions.checkNotNull(uniqueKeyField);
         String solrZk = connectionParameters.get(SolrConnectionParams.ZOOKEEPER);
         CloudSolrServer solr = new CloudSolrServer(solrZk);
         String collection = connectionParameters.get(SolrConnectionParams.COLLECTION);
         solr.setDefaultCollection(collection);
+        solr.setIdField(uniqueKeyField);
         return solr;
     }
 

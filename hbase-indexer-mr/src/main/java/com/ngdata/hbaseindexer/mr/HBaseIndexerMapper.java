@@ -35,6 +35,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.ngdata.hbaseindexer.conf.IndexerComponentFactory;
 import com.ngdata.hbaseindexer.conf.IndexerComponentFactoryUtil;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -54,6 +55,7 @@ import com.codahale.metrics.Counting;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -79,6 +81,7 @@ import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.Metric;
 import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.Timer;
+
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
@@ -243,7 +246,8 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
         if (conf.getBoolean(INDEX_DIRECT_WRITE_CONF_KEY, false)) {
             String solrMode = getSolrMode(indexConnectionParams);
             if (solrMode.equals("cloud")) {
-                DirectSolrInputDocumentWriter writer = createCloudSolrWriter(context, indexConnectionParams);
+                DirectSolrInputDocumentWriter writer = createCloudSolrWriter(
+                    context, indexConnectionParams, indexerConf.getUniqueKeyField());
                 solrDocWriter = wrapInBufferedWriter(context, writer);
                 return Indexer.createIndexer(indexName, indexerConf, tableName, mapper, null, null, solrDocWriter);
             } else if (solrMode.equals("classic")) {
@@ -260,7 +264,8 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
         }
     }
 
-    private DirectSolrInputDocumentWriter createCloudSolrWriter(Context context, Map<String, String> indexConnectionParams)
+    private DirectSolrInputDocumentWriter createCloudSolrWriter(
+        Context context, Map<String, String> indexConnectionParams, String uniqueKeyField)
             throws IOException {
         String indexZkHost = indexConnectionParams.get(SolrConnectionParams.ZOOKEEPER);
         String collectionName = indexConnectionParams.get(SolrConnectionParams.COLLECTION);
@@ -272,8 +277,10 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
         if (collectionName == null) {
             throw new IllegalStateException("No collection name defined");
         }
+        Preconditions.checkNotNull(uniqueKeyField);
         CloudSolrServer solrServer = new CloudSolrServer(indexZkHost);
         solrServer.setDefaultCollection(collectionName);
+        solrServer.setIdField(uniqueKeyField);
 
         return new DirectSolrInputDocumentWriter(context.getConfiguration().get(INDEX_NAME_CONF_KEY), solrServer);
     }
@@ -294,7 +301,7 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
 
     private SolrInputDocumentWriter wrapInBufferedWriter(Context context, SolrInputDocumentWriter writer)
             throws MalformedURLException {
-        int bufferSize = context.getConfiguration().getInt(SolrOutputFormat.SOLR_RECORD_WRITER_BATCH_SIZE, 100);
+        int bufferSize = context.getConfiguration().getInt(SolrOutputFormat.SOLR_RECORD_WRITER_BATCH_SIZE, 10000);
 
         return new BufferedSolrInputDocumentWriter(
                 writer,

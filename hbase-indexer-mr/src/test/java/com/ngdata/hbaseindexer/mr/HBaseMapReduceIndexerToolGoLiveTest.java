@@ -84,6 +84,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
         MR_TEST_UTIL = new MRTestUtil(HBASE_TEST_UTILITY);
         HBASE_TEST_UTILITY.startMiniCluster();
         MR_TEST_UTIL.startMrCluster();
+        MR_TEST_UTIL.setupSolrEnvironment();
         
         FileSystem fs = FileSystem.get(HBASE_TEST_UTILITY.getConfiguration());
         int zkClientPort = HBASE_TEST_UTILITY.getZkCluster().getClientPort();
@@ -142,6 +143,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
         HBASE_ADMIN.close();
         HBASE_TEST_UTILITY.shutdownMiniMapReduceCluster();
         HBASE_TEST_UTILITY.shutdownMiniCluster();
+        MR_TEST_UTIL.tearDownSolrEnvironment();
     }
     
     @After

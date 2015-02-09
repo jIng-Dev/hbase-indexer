@@ -48,7 +48,7 @@
     <version.search>${cdh.search.version}</version.search>
     <version.search.hbase98>${cdh.search.version}</version.search.hbase98>
     <version.search.hbase10>${cdh.search.version}</version.search.hbase10>
-    <version.jersey>1.17</version.jersey>
+    <version.jersey>1.18.3</version.jersey>
 
     <!-- Tells maven plugins what file encoding to use -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

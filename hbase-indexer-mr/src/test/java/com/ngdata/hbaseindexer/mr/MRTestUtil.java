@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.solr.core.HdfsDirectoryFactory;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -74,6 +75,14 @@ class MRTestUtil {
       tmp.deleteOnExit();
       Files.write(str, tmp, Charsets.UTF_8);
       return tmp;
+    }
+    
+    public void setupSolrEnvironment() {
+      System.setProperty(HdfsDirectoryFactory.HDFS_HOME, hbaseTestUtil.getDFSCluster().getURI().toString() + "/solr");
+    }
+    
+    public void tearDownSolrEnvironment() {
+      System.clearProperty(HdfsDirectoryFactory.HDFS_HOME);
     }
 
 }

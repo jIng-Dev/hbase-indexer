@@ -65,6 +65,7 @@ public class IndexerDryRunTest {
     @BeforeClass
     public static void setupBeforeClass() throws Exception {
         HBASE_TEST_UTILITY.startMiniCluster();
+        new MRTestUtil(HBASE_TEST_UTILITY).setupSolrEnvironment();
         
         int zkClientPort = HBASE_TEST_UTILITY.getZkCluster().getClientPort();
         
@@ -87,6 +88,7 @@ public class IndexerDryRunTest {
         SOLR_TEST_UTILITY.stop();
         HBASE_ADMIN.close();
         HBASE_TEST_UTILITY.shutdownMiniCluster();
+        new MRTestUtil(HBASE_TEST_UTILITY).tearDownSolrEnvironment();
     }
     
     @Before

@@ -61,6 +61,7 @@ public class HBaseMapReduceIndexerToolTest {
         MR_TEST_UTIL = new MRTestUtil(HBASE_TEST_UTILITY);
         HBASE_TEST_UTILITY.startMiniCluster();
         MR_TEST_UTIL.startMrCluster();
+        MR_TEST_UTIL.setupSolrEnvironment();
         
         HTableDescriptor tableDescriptor = new HTableDescriptor(TEST_TABLE_NAME);
         tableDescriptor.addFamily(new HColumnDescriptor(TEST_COLFAM_NAME));
@@ -83,6 +84,7 @@ public class HBaseMapReduceIndexerToolTest {
         HBASE_ADMIN.close();
         HBASE_TEST_UTILITY.shutdownMiniMapReduceCluster();
         HBASE_TEST_UTILITY.shutdownMiniCluster();
+        MR_TEST_UTIL.tearDownSolrEnvironment();
     }
     
     /**

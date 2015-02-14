@@ -20,6 +20,8 @@ import com.ngdata.hbaseindexer.model.api.IndexerProcessRegistry;
 import com.ngdata.hbaseindexer.model.api.WriteableIndexerModel;
 import com.ngdata.hbaseindexer.model.impl.IndexerModelImpl;
 import com.ngdata.hbaseindexer.model.impl.IndexerProcessRegistryImpl;
+import com.ngdata.hbaseindexer.servlet.HBaseIndexerAuthFilter;
+import com.ngdata.hbaseindexer.servlet.HostnameFilter;
 import com.ngdata.hbaseindexer.supervisor.IndexerRegistry;
 import com.ngdata.hbaseindexer.supervisor.IndexerSupervisor;
 import com.ngdata.hbaseindexer.util.zookeeper.StateWatchingZooKeeper;
@@ -37,9 +39,11 @@ import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
 import org.mortbay.jetty.Connector;
+import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
 
 import java.util.concurrent.TimeUnit;
@@ -128,17 +132,22 @@ public class Main {
                 indexerProcessRegistry, tablePool, conf);
 
         indexerSupervisor.init();
-        startHttpServer();
+        startHttpServer(conf);
 
     }
 
-    private void startHttpServer() throws Exception {
+    private void startHttpServer(Configuration conf) throws Exception {
         server = new Server();
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
-        selectChannelConnector.setPort(11060);
+
+        int httpPort = conf.getInt("hbaseindexer.http.port", 11060);
+        log.debug("REST interface configured to run on port: " + httpPort);
+        selectChannelConnector.setPort(httpPort);
         server.setConnectors(new Connector[]{selectChannelConnector});
 
-        PackagesResourceConfig packagesResourceConfig = new PackagesResourceConfig("com/ngdata/hbaseindexer/rest");
+        String restPackage = conf.get("hbaseindexer.rest.resource.package", "com/ngdata/hbaseindexer/rest");
+        log.debug("REST interface package configured as: " + restPackage);
+        PackagesResourceConfig packagesResourceConfig = new PackagesResourceConfig(restPackage);
 
         ServletHolder servletHolder = new ServletHolder(new ServletContainer(packagesResourceConfig));
         servletHolder.setName("HBase-Indexer");
@@ -149,6 +158,10 @@ public class Main {
         context.setContextPath("/");
         context.setAttribute("indexerModel", indexerModel);
         context.setAttribute("indexerSupervisor", indexerSupervisor);
+        context.addFilter(HostnameFilter.class, "*", Handler.REQUEST);
+        FilterHolder authFilterHolder =
+          context.addFilter(HBaseIndexerAuthFilter.class, "*", Handler.REQUEST);
+        context.getServletContext().setAttribute(HBaseIndexerAuthFilter.CONF_ATTRIBUTE, conf);
 
         server.setHandler(context);
         server.start();

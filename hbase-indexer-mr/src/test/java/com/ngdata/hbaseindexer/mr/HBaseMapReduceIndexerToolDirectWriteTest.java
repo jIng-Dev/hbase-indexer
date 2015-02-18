@@ -29,7 +29,10 @@ import com.ngdata.hbaseindexer.util.solr.SolrTestingUtility;
 import com.ngdata.sep.util.io.Closer;
 import com.ngdata.sep.util.zookeeper.ZkUtil;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -47,6 +50,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -58,6 +62,7 @@ import java.util.Map.Entry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@Ignore
 public class HBaseMapReduceIndexerToolDirectWriteTest {
 
     private static final byte[] TEST_TABLE_NAME = Bytes.toBytes("record");
@@ -86,9 +91,15 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
         MR_TEST_UTIL.startMrCluster();
         MR_TEST_UTIL.setupSolrEnvironment();
         
+        FileSystem fs = FileSystem.get(HBASE_TEST_UTILITY.getConfiguration());
         int zkClientPort = HBASE_TEST_UTILITY.getZkCluster().getClientPort();
         
-        SOLR_TEST_UTILITY = new SolrTestingUtility(zkClientPort, NetUtils.getFreePort());
+        SOLR_TEST_UTILITY = new SolrTestingUtility(zkClientPort, NetUtils.getFreePort(),
+            ImmutableMap.of(
+                "solr.hdfs.blockcache.enabled", "false",
+                "solr.directoryFactory", "HdfsDirectoryFactory",
+                "solr.hdfs.home", fs.makeQualified(new Path("/solrdata")).toString()));
+        
         SOLR_TEST_UTILITY.start();
         SOLR_TEST_UTILITY.uploadConfig("config1",
                 Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "schema.xml")),

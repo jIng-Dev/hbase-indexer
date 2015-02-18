@@ -21,7 +21,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
 import com.ngdata.hbaseindexer.util.net.NetUtils;
 import com.ngdata.hbaseindexer.util.solr.SolrTestingUtility;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -36,6 +39,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -46,12 +50,14 @@ import java.util.Map.Entry;
 
 import static org.junit.Assert.assertEquals;
 
+@Ignore
 public class IndexerDryRunTest {
 
     private static final byte[] TEST_TABLE_NAME = Bytes.toBytes("record");
     private static final byte[] TEST_COLFAM_NAME = Bytes.toBytes("info");
     
     private static final HBaseTestingUtility HBASE_TEST_UTILITY = HBaseTestingUtilityFactory.createTestUtility();
+    private static MRTestUtil MR_TEST_UTIL;
     private static SolrTestingUtility SOLR_TEST_UTILITY;
     
     
@@ -64,12 +70,20 @@ public class IndexerDryRunTest {
     
     @BeforeClass
     public static void setupBeforeClass() throws Exception {
+        MR_TEST_UTIL = new MRTestUtil(HBASE_TEST_UTILITY);
         HBASE_TEST_UTILITY.startMiniCluster();
-        new MRTestUtil(HBASE_TEST_UTILITY).setupSolrEnvironment();
+        MR_TEST_UTIL.startMrCluster();
+        MR_TEST_UTIL.setupSolrEnvironment();
         
+        FileSystem fs = FileSystem.get(HBASE_TEST_UTILITY.getConfiguration());
         int zkClientPort = HBASE_TEST_UTILITY.getZkCluster().getClientPort();
         
-        SOLR_TEST_UTILITY = new SolrTestingUtility(zkClientPort, NetUtils.getFreePort());
+        SOLR_TEST_UTILITY = new SolrTestingUtility(zkClientPort, NetUtils.getFreePort(),
+            ImmutableMap.of(
+                "solr.hdfs.blockcache.enabled", "false",
+                "solr.directoryFactory", "HdfsDirectoryFactory",
+                "solr.hdfs.home", fs.makeQualified(new Path("/solrdata")).toString()));
+
         SOLR_TEST_UTILITY.start();
         SOLR_TEST_UTILITY.uploadConfig("config1",
                 Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "schema.xml")),
@@ -87,8 +101,9 @@ public class IndexerDryRunTest {
     public static void tearDownClass() throws Exception {
         SOLR_TEST_UTILITY.stop();
         HBASE_ADMIN.close();
+        HBASE_TEST_UTILITY.shutdownMiniMapReduceCluster();
         HBASE_TEST_UTILITY.shutdownMiniCluster();
-        new MRTestUtil(HBASE_TEST_UTILITY).tearDownSolrEnvironment();
+        MR_TEST_UTIL.tearDownSolrEnvironment();
     }
     
     @Before

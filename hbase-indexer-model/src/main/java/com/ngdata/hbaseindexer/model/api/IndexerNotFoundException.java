@@ -15,7 +15,7 @@
  */
 package com.ngdata.hbaseindexer.model.api;
 
-public class IndexerNotFoundException extends Exception {
+public class IndexerNotFoundException extends IndexerException {
 
     public IndexerNotFoundException(String name) {
         super("Index does not exist: " + name);

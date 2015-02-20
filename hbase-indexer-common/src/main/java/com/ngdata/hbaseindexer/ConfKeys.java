@@ -34,4 +34,9 @@ public class ConfKeys {
     /** Ganglia reporting interval, in seconds. */
     public static final String GANGLIA_INTERVAL = "hbaseindexer.metrics.ganglia.interval";
     
+    /** HTTP port that REST API listens on. */
+    public static final String HTTP_PORT = "hbaseindexer.http.port";
+
+    /** Package for REST resource. */
+    public static final String REST_RESOURCE_PACKAGE = "hbaseindexer.rest.resource.package";
 }

@@ -15,7 +15,7 @@
  */
 package com.ngdata.hbaseindexer.model.api;
 
-public class IndexerModelException extends Exception {
+public class IndexerModelException extends IndexerException {
     public IndexerModelException() {
         super();
     }
@@ -31,4 +31,5 @@ public class IndexerModelException extends Exception {
     public IndexerModelException(Throwable cause) {
         super(cause);
     }
+
 }

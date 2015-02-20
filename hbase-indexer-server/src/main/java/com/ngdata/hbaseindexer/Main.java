@@ -15,11 +15,13 @@
  */
 package com.ngdata.hbaseindexer;
 
+import com.ngdata.hbaseindexer.ConfKeys;
 import com.ngdata.hbaseindexer.master.IndexerMaster;
 import com.ngdata.hbaseindexer.model.api.IndexerProcessRegistry;
 import com.ngdata.hbaseindexer.model.api.WriteableIndexerModel;
 import com.ngdata.hbaseindexer.model.impl.IndexerModelImpl;
 import com.ngdata.hbaseindexer.model.impl.IndexerProcessRegistryImpl;
+import com.ngdata.hbaseindexer.servlet.ErrorHandlerFilter;
 import com.ngdata.hbaseindexer.servlet.HBaseIndexerAuthFilter;
 import com.ngdata.hbaseindexer.servlet.HostnameFilter;
 import com.ngdata.hbaseindexer.supervisor.IndexerRegistry;
@@ -140,12 +142,12 @@ public class Main {
         server = new Server();
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
 
-        int httpPort = conf.getInt("hbaseindexer.http.port", 11060);
+        int httpPort = conf.getInt(ConfKeys.HTTP_PORT, 11060);
         log.debug("REST interface configured to run on port: " + httpPort);
         selectChannelConnector.setPort(httpPort);
         server.setConnectors(new Connector[]{selectChannelConnector});
 
-        String restPackage = conf.get("hbaseindexer.rest.resource.package", "com/ngdata/hbaseindexer/rest");
+        String restPackage = conf.get(ConfKeys.REST_RESOURCE_PACKAGE, "com/ngdata/hbaseindexer/compatrest");
         log.debug("REST interface package configured as: " + restPackage);
         PackagesResourceConfig packagesResourceConfig = new PackagesResourceConfig(restPackage);
 
@@ -161,6 +163,7 @@ public class Main {
         context.addFilter(HostnameFilter.class, "*", Handler.REQUEST);
         FilterHolder authFilterHolder =
           context.addFilter(HBaseIndexerAuthFilter.class, "*", Handler.REQUEST);
+        context.addFilter(ErrorHandlerFilter.class, "*", Handler.REQUEST);
         context.getServletContext().setAttribute(HBaseIndexerAuthFilter.CONF_ATTRIBUTE, conf);
 
         server.setHandler(context);

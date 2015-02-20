@@ -15,7 +15,7 @@
  */
 package com.ngdata.hbaseindexer.model.api;
 
-public class IndexerExistsException extends Exception {
+public class IndexerExistsException extends IndexerException {
 
     public IndexerExistsException(String name) {
         super("Indexer already exists: " + name);

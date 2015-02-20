@@ -15,7 +15,7 @@
  */
 package com.ngdata.hbaseindexer.model.api;
 
-public class IndexerUpdateException extends Exception {
+public class IndexerUpdateException extends IndexerException {
     public IndexerUpdateException(String message) {
         super(message);
     }

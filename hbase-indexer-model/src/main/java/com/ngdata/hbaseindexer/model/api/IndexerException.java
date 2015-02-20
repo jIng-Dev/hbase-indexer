@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 NGDATA nv
+ * Copyright 2015 NGDATA nv
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,20 @@
  */
 package com.ngdata.hbaseindexer.model.api;
 
-/**
- * Thrown when trying to update an {@link IndexerDefinition} to an invalid state.
- */
-public class IndexerValidityException extends IndexerException {
-    public IndexerValidityException(String message) {
+public abstract class IndexerException extends Exception {
+    public IndexerException() {
+        super();
+    }
+
+    public IndexerException(String message) {
         super(message);
     }
 
-    public IndexerValidityException(String message, Throwable cause) {
+    public IndexerException(String message, Throwable cause) {
         super(message, cause);
+    }
+
+    public IndexerException(Throwable cause) {
+        super(cause);
     }
 }

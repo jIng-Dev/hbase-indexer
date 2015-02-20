@@ -19,7 +19,7 @@ package com.ngdata.hbaseindexer.model.api;
  * Thrown when trying to update an IndexerDefinition for which the {@link IndexerDefinition#getOccVersion()}
  * didn't match.
  */
-public class IndexerConcurrentModificationException extends Exception {
+public class IndexerConcurrentModificationException extends IndexerException {
     public IndexerConcurrentModificationException(String indexerName) {
         super("The indexer definition was modified since it was read. Indexer: " + indexerName);
     }

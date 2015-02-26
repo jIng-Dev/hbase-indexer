@@ -137,8 +137,9 @@ public class CliCompatibleIndexResource {
      WriteableIndexerModel model = getModel();
 
      IndexerDefinitionBuilder builder = getBuilderFromJson(jsonBytes, null);
+     IndexerDefinition indexer = builder.build();
      try {
-       model.addIndexer(builder.build());
+       model.addIndexer(indexer);
      } catch (IndexerExistsException iee) {
        throw new IndexerServerException(HttpServletResponse.SC_BAD_REQUEST, iee);
      } catch (IndexerValidityException ive) {

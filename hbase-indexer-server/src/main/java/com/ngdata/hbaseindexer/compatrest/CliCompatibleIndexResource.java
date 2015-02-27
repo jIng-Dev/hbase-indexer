@@ -40,9 +40,12 @@ import com.ngdata.hbaseindexer.model.api.IndexerException;
 import com.ngdata.hbaseindexer.model.api.IndexerExistsException;
 import com.ngdata.hbaseindexer.model.api.IndexerModelException;
 import com.ngdata.hbaseindexer.model.api.IndexerNotFoundException;
+import com.ngdata.hbaseindexer.model.api.IndexerUpdateException;
 import com.ngdata.hbaseindexer.model.api.IndexerValidityException;
 import com.ngdata.hbaseindexer.model.api.WriteableIndexerModel;
 import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionJsonSerDeser;
+import com.ngdata.hbaseindexer.model.impl.UpdateIndexerInputJsonSerDeser;
+import com.ngdata.hbaseindexer.model.impl.UpdateIndexerInputJsonSerDeser.UpdateIndexerInput;
 import com.ngdata.hbaseindexer.servlet.IndexerServerException;
 import com.ngdata.hbaseindexer.util.json.JsonFormatException;
 import org.apache.commons.logging.Log;
@@ -70,6 +73,12 @@ public class CliCompatibleIndexResource {
     protected class IndexerFormatException extends IndexerException {
       public IndexerFormatException(String msg, Throwable e) {
         super(msg, e);
+      }
+    }
+
+    protected class InternalIndexerException extends IndexerException {
+      public InternalIndexerException(Throwable t) {
+        super(t);
       }
     }
 
@@ -125,7 +134,56 @@ public class CliCompatibleIndexResource {
    @Path("{name}")
    @Consumes("application/json")
    public void put(@PathParam("name") String indexName, byte [] jsonBytes) throws IndexerServerException {
-     throw new UnsupportedOperationException("update not yet supported");
+     WriteableIndexerModel model = getModel();
+
+     if (!model.hasIndexer(indexName)) {
+       throw new IndexerServerException(HttpServletResponse.SC_BAD_REQUEST,
+         new IndexerNotFoundException("Indexer does not exist: " + indexName));
+     }
+
+     UpdateIndexerInput input = null;
+     try {
+       input = UpdateIndexerInputJsonSerDeser.INSTANCE.fromJsonBytes(jsonBytes);
+     } catch (Exception e) {
+       throw new IndexerServerException(HttpServletResponse.SC_BAD_REQUEST,
+         new IndexerFormatException("Unable to create indexer definitions", e));
+     }
+     IndexerDefinition baseIndexer = input.getBaseIndexer();
+     IndexerDefinition newIndexer = input.getNewIndexer();
+
+     if (!newIndexer.getName().equals(indexName)) {
+       throw new IndexerServerException(HttpServletResponse.SC_BAD_REQUEST,
+         new IndexerUpdateException("Requested update of indexer: " + indexName +
+           " but indexer parameter has name: " + newIndexer.getName()));
+     }
+
+     try {
+       String lock = model.lockIndexer(indexName);
+       try {
+         IndexerDefinition oldIndexer = model.getFreshIndexer(indexName);
+         if (!oldIndexer.equals(baseIndexer)) {
+           throw new IndexerServerException(HttpServletResponse.SC_BAD_REQUEST,
+             new IndexerConcurrentModificationException(
+               "Base Indexer does not match model, model may have been modified concurrently"));
+         }
+
+         if (newIndexer.equals(oldIndexer)) {
+           log.info("Indexer " + indexName + " already matches the specified settings, did not update it.");
+         } else {
+           model.updateIndexer(newIndexer, lock);
+           log.info("Indexer updated: " + indexName);
+         }
+       } finally {
+         // In case we requested deletion of an index, it might be that the lock is already removed
+         // by the time we get here as part of the index deletion.
+         boolean ignoreMissing = newIndexer != null
+           && newIndexer.getLifecycleState() == LifecycleState.DELETE_REQUESTED;
+         model.unlockIndexer(lock, ignoreMissing);
+       }
+     } catch (Exception e) {
+       throw new IndexerServerException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+         new InternalIndexerException(e));
+     }
    }
 
    /**

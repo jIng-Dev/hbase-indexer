@@ -15,9 +15,12 @@
  */
 package com.ngdata.hbaseindexer.cli;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -31,9 +34,16 @@ import com.ngdata.hbaseindexer.model.api.IndexerModel;
 import com.ngdata.hbaseindexer.model.api.IndexerProcess;
 import com.ngdata.hbaseindexer.model.api.IndexerProcessRegistry;
 import com.ngdata.hbaseindexer.model.impl.IndexerProcessRegistryImpl;
+import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionJsonSerDeser;
+import com.ngdata.hbaseindexer.util.http.HttpUtil;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.zookeeper.KeeperException;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
 import org.joda.time.DateTime;
 
 /**
@@ -65,7 +75,8 @@ public class ListIndexersCli extends BaseIndexCli {
     public void run(OptionSet options) throws Exception {
         super.run(options);
 
-        List<IndexerDefinition> indexers = new ArrayList<IndexerDefinition>(model.getIndexers());
+        List<IndexerDefinition> indexers = (options.has("http") ?
+          getIndexersHttp(options) : new ArrayList<IndexerDefinition>(model.getIndexers()));
         Collections.sort(indexers, IndexerDefinitionNameComparator.INSTANCE);
 
         PrintStream ps = System.out;
@@ -181,6 +192,24 @@ public class ListIndexersCli extends BaseIndexCli {
                 ps.println(prefix + args.length + " arguments, use -dump to see content");
             }
         }
+    }
+
+    private List<IndexerDefinition> getIndexersHttp(OptionSet options) throws Exception {
+        List<IndexerDefinition> indexers = new ArrayList<IndexerDefinition>();
+        HttpGet httpGet = new HttpGet(httpOption.value(options));
+        byte [] response = HttpUtil.sendRequest(httpGet);
+        ArrayNode node;
+        try {
+          node = (ArrayNode) new ObjectMapper().readTree(new ByteArrayInputStream(response));
+        } catch (IOException e) {
+          throw new RuntimeException("Error parsing indexer definition JSON.", e);
+        }
+        Iterator<JsonNode> it = node.getElements();
+        while (it.hasNext()) {
+          JsonNode nextNode = it.next();
+          indexers.add(IndexerDefinitionJsonSerDeser.INSTANCE.fromJson((ObjectNode)nextNode).build());
+        }
+        return indexers;
     }
 
     private static final String COUNTER_MAP_INPUT_RECORDS = "org.apache.hadoop.mapred.Task$Counter:MAP_INPUT_RECORDS";

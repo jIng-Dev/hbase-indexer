@@ -33,7 +33,7 @@ public class JsonUtil {
     }
 
     public static ArrayNode getArray(JsonNode node, String prop) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             throw new JsonFormatException("Missing required property: " + prop);
         }
         if (!node.get(prop).isArray()) {
@@ -43,9 +43,10 @@ public class JsonUtil {
     }
 
     public static ArrayNode getArray(JsonNode node, String prop, ArrayNode defaultValue) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             return defaultValue;
         }
+
         if (!node.get(prop).isArray()) {
             throw new JsonFormatException("Not an array property: " + prop);
         }
@@ -53,7 +54,7 @@ public class JsonUtil {
     }
 
     public static ObjectNode getObject(JsonNode node, String prop) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             throw new JsonFormatException("Missing required property: " + prop);
         }
         if (!node.get(prop).isObject()) {
@@ -63,7 +64,8 @@ public class JsonUtil {
     }
 
     public static ObjectNode getObject(JsonNode node, String prop, ObjectNode defaultValue) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        JsonNode propNode = node.get(prop);
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             return defaultValue;
         }
         if (!node.get(prop).isObject()) {
@@ -73,7 +75,7 @@ public class JsonUtil {
     }
 
     public static String getString(JsonNode node, String prop) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             throw new JsonFormatException("Missing required property: " + prop);
         }
         if (!node.get(prop).isTextual()) {
@@ -83,7 +85,7 @@ public class JsonUtil {
     }
 
     public static String getString(JsonNode node, String prop, String defaultValue) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             return defaultValue;
         }
         if (!node.get(prop).isTextual()) {
@@ -119,7 +121,7 @@ public class JsonUtil {
     }
 
     public static int getInt(JsonNode node, String prop, int defaultValue) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             return defaultValue;
         }
         if (!node.get(prop).isInt()) {
@@ -129,7 +131,7 @@ public class JsonUtil {
     }
 
     public static int getInt(JsonNode node, String prop) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             throw new JsonFormatException("Missing required property: " + prop);
         }
         if (!node.get(prop).isInt()) {
@@ -139,7 +141,7 @@ public class JsonUtil {
     }
 
     public static long getLong(JsonNode node, String prop) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             throw new JsonFormatException("Missing required property: " + prop);
         }
         if (!node.get(prop).isLong() && !node.get(prop).isInt()) {
@@ -149,7 +151,7 @@ public class JsonUtil {
     }
 
     public static Long getLong(JsonNode node, String prop, Long defaultValue) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             return defaultValue;
         }
         if (!node.get(prop).isLong() && !node.get(prop).isInt()) {
@@ -159,7 +161,7 @@ public class JsonUtil {
     }
 
     public static Double getDouble(JsonNode node, String prop, Double defaultValue) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             return defaultValue;
         }
         if (!node.get(prop).isLong() && !node.get(prop).isDouble()) {
@@ -169,7 +171,7 @@ public class JsonUtil {
     }
 
     public static byte[] getBinary(JsonNode node, String prop) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             throw new JsonFormatException("Missing required property: " + prop);
         }
         try {
@@ -180,7 +182,7 @@ public class JsonUtil {
     }
 
     public static byte[] getBinary(JsonNode node, String prop, byte[] defaultValue) throws JsonFormatException {
-        if (node.get(prop) == null) {
+        if (node.get(prop) == null || node.get(prop).isNull()) {
             return defaultValue;
         }
         try {
@@ -192,7 +194,7 @@ public class JsonUtil {
 
     public static List<String> getStrings(JsonNode node, String prop, List<String> defaultValue) throws JsonFormatException {
         ArrayNode arrayNode = getArray(node, prop, null);
-        if (arrayNode == null) {
+        if (arrayNode == null || arrayNode.isNull()) {
             return defaultValue;
         }
         List<String> elements = new ArrayList<String>();

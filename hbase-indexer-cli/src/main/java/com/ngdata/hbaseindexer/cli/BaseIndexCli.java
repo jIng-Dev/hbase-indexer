@@ -34,6 +34,7 @@ import java.io.IOException;
 
 public abstract class BaseIndexCli extends BaseCli {
     private OptionSpec<String> zkOption;
+    protected OptionSpec<String> httpOption;
     private String zkConnectionString;
     protected Configuration conf;
     protected ZooKeeperItf zk;
@@ -51,6 +52,10 @@ public abstract class BaseIndexCli extends BaseCli {
                                 "specified through environment variable " + ZK_ENV_VAR)
                         .withRequiredArg().ofType(String.class).describedAs("connection-string");
 
+        httpOption = parser
+                        .acceptsAll(Lists.newArrayList("http"), "HTTP connection string.  If specified, will use the HTTP " +
+                                "interface rather than communciating directly with zookeeper")
+                        .withOptionalArg().ofType(String.class).describedAs("http-url");
         return parser;
     }
 

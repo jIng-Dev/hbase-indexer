@@ -18,8 +18,13 @@ package com.ngdata.hbaseindexer.cli;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinitionBuilder;
 import com.ngdata.hbaseindexer.model.api.IndexerModel;
+import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionJsonSerDeser;
+import com.ngdata.hbaseindexer.util.http.HttpUtil;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ByteArrayEntity;
+
 
 /**
  * CLI tool to add a new {@link IndexerDefinition}s to the {@link IndexerModel}.
@@ -59,8 +64,23 @@ public class AddIndexerCli extends AddOrUpdateIndexerCli {
             return;
         }
 
-        model.addIndexer(indexer);
+        if (!options.has("http")) {
+            model.addIndexer(indexer);
+            System.out.println("Indexer added: " + indexer.getName());
+        } else {
+            addIndexerHttp(options, indexer);
+        }
+    }
 
-        System.out.println("Indexer added: " + indexer.getName());
+    private void addIndexerHttp(OptionSet options, IndexerDefinition indexer) throws Exception {
+        HttpPost httpPost = new HttpPost(httpOption.value(options));
+        byte [] jsonBytes = IndexerDefinitionJsonSerDeser.INSTANCE.toJsonBytes(indexer);
+        httpPost.setEntity(new ByteArrayEntity(jsonBytes));
+        String response = HttpUtil.getResponse(HttpUtil.sendRequest(httpPost));
+        if (response != null) {
+            System.out.println(response);
+        } else {
+            throw new RuntimeException("Expected non-null response");
+        }
     }
 }

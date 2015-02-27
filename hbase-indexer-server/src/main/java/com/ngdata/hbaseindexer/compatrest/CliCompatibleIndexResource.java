@@ -27,6 +27,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
@@ -51,6 +52,9 @@ import com.ngdata.hbaseindexer.util.json.JsonFormatException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.zookeeper.KeeperException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
+import org.codehaus.jackson.node.JsonNodeFactory;
 
 /**
  * Indexer resource, based on the com.ngdata.hbaseindexer.rest implementation.
@@ -95,8 +99,9 @@ public class CliCompatibleIndexResource {
      * Delete an indexer definition
      */
     @DELETE
+    @Produces("application/json")
     @Path("{name}")
-    public void delete(@PathParam("name") String indexerName) throws IndexerServerException, InterruptedException, KeeperException {
+    public byte[] delete(@PathParam("name") String indexerName) throws IndexerServerException, InterruptedException, KeeperException {
       if (!getModel().hasIndexer(indexerName)) {
         throw new IndexerServerException(HttpServletResponse.SC_BAD_REQUEST,
           new IndexerNotFoundException("Indexer does not exist: " + indexerName));
@@ -117,7 +122,7 @@ public class CliCompatibleIndexResource {
 
         getModel().updateIndexerInternal(builder.build());
 
-        waitForDeletion(indexerName);
+        return waitForDeletion(indexerName);
      } catch (IndexerNotFoundException ex) {
        throw new IndexerServerException(HttpServletResponse.SC_BAD_REQUEST, ex);
      } catch (IndexerConcurrentModificationException ex) {
@@ -133,7 +138,8 @@ public class CliCompatibleIndexResource {
    @PUT
    @Path("{name}")
    @Consumes("application/json")
-   public void put(@PathParam("name") String indexName, byte [] jsonBytes) throws IndexerServerException {
+   @Produces("application/json")
+   public byte[] put(@PathParam("name") String indexName, byte [] jsonBytes) throws IndexerServerException {
      WriteableIndexerModel model = getModel();
 
      if (!model.hasIndexer(indexName)) {
@@ -168,10 +174,10 @@ public class CliCompatibleIndexResource {
          }
 
          if (newIndexer.equals(oldIndexer)) {
-           log.info("Indexer " + indexName + " already matches the specified settings, did not update it.");
+           return toJsonResultBytes("Indexer " + indexName + " already matches the specified settings, did not update it.");
          } else {
            model.updateIndexer(newIndexer, lock);
-           log.info("Indexer updated: " + indexName);
+           return toJsonResultBytes("Indexer updated: " + indexName);
          }
        } finally {
          // In case we requested deletion of an index, it might be that the lock is already removed
@@ -191,7 +197,8 @@ public class CliCompatibleIndexResource {
     */
    @POST
    @Consumes("application/json")
-   public void post(byte [] jsonBytes) throws IndexerServerException {
+   @Produces("application/json")
+   public byte[] post(byte [] jsonBytes) throws IndexerServerException {
      WriteableIndexerModel model = getModel();
 
      IndexerDefinitionBuilder builder = getBuilderFromJson(jsonBytes, null);
@@ -205,6 +212,7 @@ public class CliCompatibleIndexResource {
      } catch (IndexerModelException ime) {
        throw new IndexerServerException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, ime);
      }
+     return toJsonResultBytes("Indexer added: " + indexer.getName());
    }
 
    private WriteableIndexerModel getModel() {
@@ -224,7 +232,7 @@ public class CliCompatibleIndexResource {
      }
    }
 
-   private void waitForDeletion(String indexerName) throws InterruptedException, KeeperException, IndexerServerException {
+   private byte[] waitForDeletion(String indexerName) throws InterruptedException, KeeperException, IndexerServerException {
       long startTime = System.nanoTime();
       while (getModel().hasIndexer(indexerName)) {
         IndexerDefinition indexerDef;
@@ -253,6 +261,16 @@ public class CliCompatibleIndexResource {
               + indexerDef.getLifecycleState());
         }
       }
-      log.info("Deleted indexer \'" + indexerName + "\'");
+      return toJsonResultBytes("Deleted indexer \'" + indexerName + "\'");
+    }
+
+    public byte[] toJsonResultBytes(String result) {
+        ObjectNode objJson = JsonNodeFactory.instance.objectNode();
+        objJson.put("result", result);
+        try {
+            return new ObjectMapper().writeValueAsBytes(objJson);
+        } catch (IOException e) {
+            throw new RuntimeException("Error serializing result", e);
+        }
     }
 }

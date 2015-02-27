@@ -18,7 +18,12 @@ package com.ngdata.hbaseindexer.cli;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinitionBuilder;
 import com.ngdata.hbaseindexer.model.api.IndexerModel;
+import com.ngdata.hbaseindexer.model.impl.UpdateIndexerInputJsonSerDeser;
+import com.ngdata.hbaseindexer.model.impl.UpdateIndexerInputJsonSerDeser.UpdateIndexerInput;
+import com.ngdata.hbaseindexer.util.http.HttpUtil;
 import joptsimple.OptionSet;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.entity.ByteArrayEntity;
 
 import static com.ngdata.hbaseindexer.model.api.IndexerDefinition.LifecycleState;
 
@@ -41,30 +46,49 @@ public class UpdateIndexerCli extends AddOrUpdateIndexerCli {
 
         String indexName = nameOption.value(options);
 
-        if (!model.hasIndexer(indexName)) {
-            throw new CliException("Indexer does not exist: " + indexName);
-        }
-
-        IndexerDefinition newIndexer = null;
-        String lock = model.lockIndexer(indexName);
-        try {
-            IndexerDefinition indexer = model.getFreshIndexer(indexName);
-
-            IndexerDefinitionBuilder builder = buildIndexerDefinition(options, indexer);
-            newIndexer = builder.build();
-
-            if (newIndexer.equals(indexer)) {
-                System.out.println("Index already matches the specified settings, did not update it.");
-            } else {
-                model.updateIndexer(newIndexer, lock);
-                System.out.println("Index updated: " + indexName);
+        if (!options.has("http")) {
+            if (!model.hasIndexer(indexName)) {
+                throw new CliException("Indexer does not exist: " + indexName);
             }
-        } finally {
-            // In case we requested deletion of an index, it might be that the lock is already removed
-            // by the time we get here as part of the index deletion.
-            boolean ignoreMissing = newIndexer != null
-                    && newIndexer.getLifecycleState() == LifecycleState.DELETE_REQUESTED;
-            model.unlockIndexer(lock, ignoreMissing);
+
+            IndexerDefinition newIndexer = null;
+            String lock = model.lockIndexer(indexName);
+            try {
+                IndexerDefinition indexer = model.getFreshIndexer(indexName);
+
+                IndexerDefinitionBuilder builder = buildIndexerDefinition(options, indexer);
+                newIndexer = builder.build();
+
+                if (newIndexer.equals(indexer)) {
+                    System.out.println("Index already matches the specified settings, did not update it.");
+                } else {
+                    model.updateIndexer(newIndexer, lock);
+                    System.out.println("Index updated: " + indexName);
+                }
+            } finally {
+                // In case we requested deletion of an index, it might be that the lock is already removed
+                // by the time we get here as part of the index deletion.
+                boolean ignoreMissing = newIndexer != null
+                        && newIndexer.getLifecycleState() == LifecycleState.DELETE_REQUESTED;
+                model.unlockIndexer(lock, ignoreMissing);
+            }
+        } else {
+          updateIndexerHttp(options, indexName);
         }
+    }
+
+    private void updateIndexerHttp(OptionSet options, String indexerName) throws Exception {
+        IndexerDefinition indexer = model.getFreshIndexer(indexerName);
+
+        IndexerDefinitionBuilder builder = buildIndexerDefinition(options, indexer);
+        IndexerDefinition newIndexer = builder.build();
+
+        UpdateIndexerInput input = new UpdateIndexerInput(newIndexer, indexer);
+        byte [] jsonBytes = UpdateIndexerInputJsonSerDeser.INSTANCE.toJsonBytes(input);
+        String path = httpOption.value(options);
+        path += (path.endsWith("/")?"":"/") + indexerName;
+        HttpPut httpPut = new HttpPut(path);
+        httpPut.setEntity(new ByteArrayEntity(jsonBytes));
+        byte [] response = HttpUtil.sendRequest(httpPut);
     }
 }

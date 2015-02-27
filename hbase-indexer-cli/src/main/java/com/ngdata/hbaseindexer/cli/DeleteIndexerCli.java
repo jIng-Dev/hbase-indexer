@@ -20,9 +20,11 @@ import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinition.LifecycleState;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinitionBuilder;
 import com.ngdata.hbaseindexer.model.api.IndexerNotFoundException;
+import com.ngdata.hbaseindexer.util.http.HttpUtil;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.zookeeper.KeeperException;
 
 public class DeleteIndexerCli extends BaseIndexCli {
@@ -73,7 +75,6 @@ public class DeleteIndexerCli extends BaseIndexCli {
                         + indexerDef.getLifecycleState());
             }
         }
-        System.out.printf("\nDeleted indexer '%s'\n", indexerName);
     }
 
     @Override
@@ -82,26 +83,41 @@ public class DeleteIndexerCli extends BaseIndexCli {
 
         String indexerName = nameOption.value(options);
 
-        if (!model.hasIndexer(indexerName)) {
-            throw new CliException("Indexer does not exist: " + indexerName);
+        if (!options.has("http")) {
+            if (!model.hasIndexer(indexerName)) {
+                throw new CliException("Indexer does not exist: " + indexerName);
+            }
+
+            IndexerDefinition indexerDef = model.getIndexer(indexerName);
+
+            if (indexerDef.getLifecycleState() == LifecycleState.DELETE_REQUESTED
+                    || indexerDef.getLifecycleState() == LifecycleState.DELETING) {
+                System.err.printf("Delete of '%s' is already in progress\n", indexerName);
+                return;
+            }
+
+            IndexerDefinitionBuilder builder = new IndexerDefinitionBuilder();
+            builder.startFrom(indexerDef);
+            builder.lifecycleState(LifecycleState.DELETE_REQUESTED);
+
+            model.updateIndexerInternal(builder.build());
+
+            waitForDeletion(indexerName);
+            System.out.printf("\nDeleted indexer '%s'\n", indexerName);
+        } else {
+            deleteIndexerHttp(options, indexerName);
         }
-
-        IndexerDefinition indexerDef = model.getIndexer(indexerName);
-
-        if (indexerDef.getLifecycleState() == LifecycleState.DELETE_REQUESTED
-                || indexerDef.getLifecycleState() == LifecycleState.DELETING) {
-            System.err.printf("Delete of '%s' is already in progress\n", indexerName);
-            return;
-        }
-
-        IndexerDefinitionBuilder builder = new IndexerDefinitionBuilder();
-        builder.startFrom(indexerDef);
-        builder.lifecycleState(LifecycleState.DELETE_REQUESTED);
-
-        model.updateIndexerInternal(builder.build());
-
-        waitForDeletion(indexerName);
-
     }
 
+    private void deleteIndexerHttp(OptionSet options, String indexerName) throws Exception {
+        String path = httpOption.value(options);
+        path += (path.endsWith("/")?"":"/") + indexerName;
+        HttpDelete httpDelete = new HttpDelete(path);
+        String response = HttpUtil.getResponse(HttpUtil.sendRequest(httpDelete));
+        if (response != null) {
+            System.out.println(response);
+        } else {
+            throw new RuntimeException("Expected non-null response");
+        }
+    }
 }

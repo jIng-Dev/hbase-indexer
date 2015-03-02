@@ -205,6 +205,12 @@
         <artifactId>search-mr</artifactId>
         <version>${version.search}</version>
       </dependency>
+      <!-- CDH BUILD: add sentry to dependency -->
+      <dependency>
+        <groupId>org.apache.sentry</groupId>
+        <artifactId>sentry-binding-hbase-indexer</artifactId>
+        <version>${cdh.sentry.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.apache.solr</groupId>
         <artifactId>solr-solrj</artifactId>

@@ -91,7 +91,7 @@ public class CliCompatibleIndexResource {
      */
     @GET
     @Produces("application/json")
-    public Collection<IndexerDefinition> get(@Context UriInfo uriInfo) throws IndexerException {
+    public Collection<IndexerDefinition> get(@Context UriInfo uriInfo) throws IndexerServerException {
       return getModel().getIndexers();
     }
 

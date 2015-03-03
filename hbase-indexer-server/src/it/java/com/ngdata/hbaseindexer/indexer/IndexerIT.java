@@ -384,6 +384,57 @@ public class IndexerIT {
     }
 
     @Test
+    public void testOneTableTwoIndexers() throws Exception {
+        createTable("table1", "family1");
+
+        assertEquals(0, collection1.query(new SolrQuery("*:*")).getResults().size());
+        assertEquals(0, collection2.query(new SolrQuery("*:*")).getResults().size());
+
+        WriteableIndexerModel indexerModel = main.getIndexerModel();
+        IndexerDefinition indexerDef = new IndexerDefinitionBuilder()
+                .name("indexer1")
+                .configuration(("<indexer table='table1'>" +
+                        "<field name='field1_s' value='family1:qualifier1'/>" +
+                        "</indexer>").getBytes())
+                .connectionType("solr")
+                .connectionParams(ImmutableMap.of("solr.zk", solrTestingUtility.getZkConnectString(),
+                        "solr.collection", "collection1"))
+                .build();
+
+        indexerModel.addIndexer(indexerDef);
+
+        indexerDef = new IndexerDefinitionBuilder()
+                .name("indexer2")
+                .configuration(("<indexer table='table1'>" +
+                        "<field name='field1_s' value='family1:qualifier1'/>" +
+                        "</indexer>").getBytes())
+                .connectionType("solr")
+                .connectionParams(ImmutableMap.of("solr.zk", solrTestingUtility.getZkConnectString(),
+                        "solr.collection", "collection2"))
+                .build();
+
+        indexerModel.addIndexer(indexerDef);
+
+        HTable table1 = new HTable(conf, "table1");
+
+        Put put = new Put(b("row1"));
+        put.add(b("family1"), b("qualifier1"), b("value1"));
+        table1.put(put);
+
+        SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
+        SepTestUtil.waitOnReplicationPeerReady(peerId("indexer2"));
+        SepTestUtil.waitOnReplication(conf, 60000L);
+
+        collection1.commit();
+        collection2.commit();
+
+        assertEquals(1, collection1.query(new SolrQuery("*:*")).getResults().size());
+        assertEquals(1, collection2.query(new SolrQuery("*:*")).getResults().size());
+
+        table1.close();
+    }
+    
+    @Test
     public void testIndexerIncrementalIndexingStates() throws Exception {
         createTable("table1", "family1");
 

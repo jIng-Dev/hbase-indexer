@@ -43,6 +43,7 @@ import com.ngdata.hbaseindexer.parse.ResultToSolrMapper;
 import com.ngdata.hbaseindexer.util.zookeeper.StateWatchingZooKeeper;
 import com.ngdata.sep.impl.HBaseShims;
 import com.ngdata.sep.util.io.Closer;
+import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -381,7 +382,7 @@ class HBaseIndexingOptions extends OptionsBridge {
 
             StateWatchingZooKeeper zk = null;
             try {
-                zk = new StateWatchingZooKeeper(hbaseIndexerZkHost, 30000);
+                zk = new StateWatchingZooKeeper(hbaseIndexerZkHost, 30000, new DefaultACLProvider());
                 IndexerModelImpl indexerModel = new IndexerModelImpl(zk, conf.get(ConfKeys.ZK_ROOT_NODE, "/ngdata/hbaseindexer"));
                 IndexerDefinition indexerDefinition = indexerModel.getIndexer(hbaseIndexerName);
                 hbaseIndexerComponentFactory = indexerDefinition.getIndexerComponentFactory();

@@ -170,7 +170,7 @@ public class IndexerModelImpl implements WriteableIndexerModel {
             zk.retryOperation(new ZooKeeperOperation<String>() {
                 @Override
                 public String execute() throws KeeperException, InterruptedException {
-                    return zk.create(indexerPath, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    return zk.create(indexerPath, data, CreateMode.PERSISTENT);
                 }
             });
         } catch (KeeperException.NodeExistsException e) {
@@ -349,7 +349,7 @@ public class IndexerModelImpl implements WriteableIndexerModel {
                         trashPath = baseTrashpath + "." + count;
                     }
 
-                    zk.create(trashPath, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    zk.create(trashPath, data, CreateMode.PERSISTENT);
 
                     return null;
                 }
@@ -446,7 +446,7 @@ public class IndexerModelImpl implements WriteableIndexerModel {
                 zk.retryOperation(new ZooKeeperOperation<String>() {
                     @Override
                     public String execute() throws KeeperException, InterruptedException {
-                        return zk.create(lockPath, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                        return zk.create(lockPath, null, CreateMode.PERSISTENT);
                     }
                 });
             } catch (KeeperException.NodeExistsException e) {

@@ -58,7 +58,7 @@ public class IndexerProcessRegistryImpl implements IndexerProcessRegistry {
             return zk.retryOperation(new ZooKeeperOperation<String>() {
                 @Override
                 public String execute() throws KeeperException, InterruptedException {
-                    return zk.create(zkNodePathBase, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                    return zk.create(zkNodePathBase, new byte[0],
                             CreateMode.EPHEMERAL_SEQUENTIAL);
                 }
             });

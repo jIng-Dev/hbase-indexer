@@ -26,6 +26,7 @@ import com.ngdata.hbaseindexer.servlet.HBaseIndexerAuthFilter;
 import com.ngdata.hbaseindexer.servlet.HostnameFilter;
 import com.ngdata.hbaseindexer.supervisor.IndexerRegistry;
 import com.ngdata.hbaseindexer.supervisor.IndexerSupervisor;
+import com.ngdata.hbaseindexer.util.zookeeper.SaslZkACLProvider;
 import com.ngdata.hbaseindexer.util.zookeeper.StateWatchingZooKeeper;
 import com.ngdata.sep.SepModel;
 import com.ngdata.sep.impl.SepModelImpl;
@@ -36,6 +37,8 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.metrics.reporting.GangliaReporter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.curator.framework.api.ACLProvider;
+import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.util.Strings;
@@ -114,7 +117,11 @@ public class Main {
 
         String zkConnectString = conf.get(ConfKeys.ZK_CONNECT_STRING);
         int zkSessionTimeout = conf.getInt(ConfKeys.ZK_SESSION_TIMEOUT, 30000);
-        zk = new StateWatchingZooKeeper(zkConnectString, zkSessionTimeout);
+
+        // if kerberos is enabled, turn on ZooKeeper ACLs
+        boolean kerberosEnabled = "kerberos".equals(conf.get(HBaseIndexerAuthFilter.HBASEINDEXER_PREFIX + "type"));
+        ACLProvider aclProvider = kerberosEnabled ? new SaslZkACLProvider() : new DefaultACLProvider();
+        zk = new StateWatchingZooKeeper(zkConnectString, zkSessionTimeout, aclProvider);
 
         tablePool = new HTablePool(conf, 10 /* TODO configurable */);
 

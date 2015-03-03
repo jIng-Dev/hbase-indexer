@@ -102,7 +102,7 @@ public class LeaderElection {
             zk.retryOperation(new ZooKeeperOperation<String>() {
                 @Override
                 public String execute() throws KeeperException, InterruptedException {
-                    return zk.create(electionPath + "/n_", null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+                    return zk.create(electionPath + "/n_", null, CreateMode.EPHEMERAL_SEQUENTIAL);
                 }
             });
         } catch (KeeperException e) {

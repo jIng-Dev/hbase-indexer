@@ -76,7 +76,7 @@ public class ZkLock {
             zk.retryOperation(new ZooKeeperOperation<String>() {
                 @Override
                 public String execute() throws KeeperException, InterruptedException {
-                    return zk.create(lockPath + "/lock-" + threadId + "-", null, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                    return zk.create(lockPath + "/lock-" + threadId + "-", null,
                             CreateMode.EPHEMERAL_SEQUENTIAL);
                 }
             });

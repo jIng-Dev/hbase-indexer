@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.curator.framework.api.ACLProvider;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -55,17 +56,20 @@ public class ZooKeeperImpl implements ZooKeeperItf {
 
     protected Thread zkEventThread;
 
+    protected ACLProvider aclProvider;
+
     private Log log = LogFactory.getLog(getClass());
 
-    protected ZooKeeperImpl() {
-
+    protected ZooKeeperImpl(ACLProvider aclProvider) {
+        this.aclProvider = aclProvider;
     }
 
     protected void setDelegate(ZooKeeper delegate) {
         this.delegate = delegate;
     }
 
-    public ZooKeeperImpl(String connectString, int sessionTimeout) throws IOException {
+    public ZooKeeperImpl(String connectString, int sessionTimeout, ACLProvider aclProvider) throws IOException {
+        this.aclProvider = aclProvider;
         this.delegate = new ZooKeeper(connectString, sessionTimeout, new MyWatcher());
     }
 
@@ -189,12 +193,14 @@ public class ZooKeeperImpl implements ZooKeeperItf {
     }
 
     @Override
-    public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode) throws KeeperException, InterruptedException {
+    public String create(String path, byte[] data, CreateMode createMode) throws KeeperException, InterruptedException {
+        List<ACL> acl = aclProvider.getAclForPath(path);
         return delegate.create(path, data, acl, createMode);
     }
 
     @Override
-    public void create(String path, byte[] data, List<ACL> acl, CreateMode createMode, AsyncCallback.StringCallback cb, Object ctx) {
+    public void create(String path, byte[] data, CreateMode createMode, AsyncCallback.StringCallback cb, Object ctx) {
+        List<ACL> acl = aclProvider.getAclForPath(path);
         delegate.create(path, data, acl, createMode, cb, ctx);
     }
 
@@ -355,4 +361,8 @@ public class ZooKeeperImpl implements ZooKeeperItf {
         }
     }
 
+    @Override
+    public ACLProvider getACLProvider() {
+        return aclProvider;
+    }
 }

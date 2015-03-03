@@ -148,7 +148,7 @@ public class SepConsumer extends BaseHRegionServer {
         // Publish our existence in ZooKeeper
         zkNodePath = hbaseConf.get(SepModel.ZK_ROOT_NODE_CONF_KEY, SepModel.DEFAULT_ZK_ROOT_NODE)
                 + "/" + subscriptionId + "/rs/" + serverName.getServerName();
-        zk.create(zkNodePath, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+        zk.create(zkNodePath, null, CreateMode.EPHEMERAL);
 
         this.running = true;
     }

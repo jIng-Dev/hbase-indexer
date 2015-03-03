@@ -19,6 +19,7 @@ import com.ngdata.sep.util.zookeeper.ZooKeeperImpl;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.curator.framework.api.ACLProvider;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
@@ -69,11 +70,12 @@ public class StateWatchingZooKeeper extends ZooKeeperImpl {
 
     private Runnable endProcessHook;
 
-    public StateWatchingZooKeeper(String connectString, int sessionTimeout) throws IOException {
-        this(connectString, sessionTimeout, sessionTimeout);
+    public StateWatchingZooKeeper(String connectString, int sessionTimeout, ACLProvider aclProvider) throws IOException {
+        this(connectString, sessionTimeout, sessionTimeout, aclProvider);
     }
 
-    public StateWatchingZooKeeper(String connectString, int sessionTimeout, int startupTimeOut) throws IOException {
+    public StateWatchingZooKeeper(String connectString, int sessionTimeout, int startupTimeOut, ACLProvider aclProvider) throws IOException {
+        super(aclProvider);
         this.requestedSessionTimeout = sessionTimeout;
         this.sessionTimeout = sessionTimeout;
 

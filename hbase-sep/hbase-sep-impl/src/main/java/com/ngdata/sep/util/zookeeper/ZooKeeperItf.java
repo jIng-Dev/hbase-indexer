@@ -18,6 +18,8 @@ package com.ngdata.sep.util.zookeeper;
 import java.io.Closeable;
 import java.util.List;
 
+import org.apache.curator.framework.api.ACLProvider;
+
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -90,9 +92,9 @@ public interface ZooKeeperItf extends Closeable {
     @Override
     void close();
 
-    String create(String path, byte[] data, List<ACL> acl, CreateMode createMode) throws KeeperException, InterruptedException;
+    String create(String path, byte[] data, CreateMode createMode) throws KeeperException, InterruptedException;
 
-    void create(String path, byte[] data, List<ACL> acl, CreateMode createMode, AsyncCallback.StringCallback cb, Object ctx);
+    void create(String path, byte[] data, CreateMode createMode, AsyncCallback.StringCallback cb, Object ctx);
 
     void delete(String path, int version) throws InterruptedException, KeeperException;
 
@@ -145,4 +147,6 @@ public interface ZooKeeperItf extends Closeable {
     void sync(String path, AsyncCallback.VoidCallback cb, Object ctx);
 
     ZooKeeper.States getState();
+
+    ACLProvider getACLProvider();
 }

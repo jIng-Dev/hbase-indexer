@@ -27,6 +27,7 @@ import com.ngdata.sep.util.zookeeper.ZooKeeperOperation;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.zookeeper.KeeperException;
 
@@ -94,7 +95,7 @@ public abstract class BaseIndexCli extends BaseCli {
     }
 
     private void connectWithZooKeeper() throws IOException, KeeperException, InterruptedException {
-        zk = new StateWatchingZooKeeper(zkConnectionString, 30000);
+        zk = new StateWatchingZooKeeper(zkConnectionString, 30000, new DefaultACLProvider());
 
         final String zkRoot = conf.get("hbaseindexer.zookeeper.znode.parent");
 

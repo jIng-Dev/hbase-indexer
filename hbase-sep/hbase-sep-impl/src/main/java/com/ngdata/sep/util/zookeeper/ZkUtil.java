@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NotEmptyException;
@@ -37,7 +38,7 @@ public class ZkUtil {
     public static ZooKeeperItf connect(String connectString, int sessionTimeout) throws ZkConnectException {
         ZooKeeperImpl zooKeeper;
         try {
-            zooKeeper = new ZooKeeperImpl(connectString, sessionTimeout);
+            zooKeeper = new ZooKeeperImpl(connectString, sessionTimeout, new DefaultACLProvider());
         } catch (IOException e) {
             throw new ZkConnectException("Failed to connect with Zookeeper @ '" + connectString + "'", e);
         }
@@ -99,7 +100,7 @@ public class ZkUtil {
                 public Boolean execute() throws KeeperException, InterruptedException {
                     if (zk.exists(subPath.toString(), false) == null) {
                         try {
-                            zk.create(subPath.toString(), newData, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                            zk.create(subPath.toString(), newData, CreateMode.PERSISTENT);
                             return true;
                         } catch (KeeperException.NodeExistsException e) {
                             return false;

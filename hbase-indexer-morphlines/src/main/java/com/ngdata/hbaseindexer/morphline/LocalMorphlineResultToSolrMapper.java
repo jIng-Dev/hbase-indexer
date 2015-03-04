@@ -24,6 +24,7 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 
 import com.ngdata.hbaseindexer.ConfigureUtil;
+
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -32,15 +33,17 @@ import org.apache.solr.common.SolrInputDocument;
 import org.codehaus.jackson.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.kitesdk.morphline.api.Command;
 import org.kitesdk.morphline.api.MorphlineCompilationException;
+import org.kitesdk.morphline.api.MorphlineRuntimeException;
 import org.kitesdk.morphline.api.Record;
 import org.kitesdk.morphline.base.Compiler;
 import org.kitesdk.morphline.base.FaultTolerance;
 import org.kitesdk.morphline.base.Fields;
 import org.kitesdk.morphline.base.Metrics;
 import org.kitesdk.morphline.base.Notifications;
+import org.kitesdk.morphline.solr.LoadSolrBuilder;
+
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
@@ -289,12 +292,27 @@ final class LocalMorphlineResultToSolrMapper implements ResultToSolrMapper, Conf
         }
 
         private SolrInputDocument convert(Record record) {
-            Map<String, Collection<Object>> map = record.getFields().asMap();
-            SolrInputDocument doc = new SolrInputDocument(new HashMap(2 * map.size()));
-            for (Map.Entry<String, Collection<Object>> entry : map.entrySet()) {
-                doc.setField(entry.getKey(), entry.getValue());
+          Map<String, Collection<Object>> map = record.getFields().asMap();
+          SolrInputDocument doc = new SolrInputDocument(new HashMap(2 * map.size()));
+          for (Map.Entry<String, Collection<Object>> entry : map.entrySet()) {
+            String key = entry.getKey();
+            if (LoadSolrBuilder.LOAD_SOLR_CHILD_DOCUMENTS.equals(key)) {
+              for (Object value : entry.getValue()) {
+                if (value instanceof Record) {
+                  value = convert((Record) value); // recurse
+                }
+                if (value instanceof SolrInputDocument) {
+                  doc.addChildDocument((SolrInputDocument) value);
+                } else {
+                  throw new MorphlineRuntimeException("Child document must be of class " + 
+                    Record.class.getName() + " or " + SolrInputDocument.class.getName() + ": " + value);
+                }
+              }
+            } else {
+              doc.setField(key, entry.getValue());
             }
-            return doc;
+          }      
+          return doc;
         }
 
     }

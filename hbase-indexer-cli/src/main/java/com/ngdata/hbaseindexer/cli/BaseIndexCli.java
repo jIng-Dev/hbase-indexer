@@ -21,6 +21,7 @@ import com.ngdata.hbaseindexer.HBaseIndexerConfiguration;
 import com.ngdata.hbaseindexer.model.api.WriteableIndexerModel;
 import com.ngdata.hbaseindexer.model.impl.IndexerModelImpl;
 import com.ngdata.hbaseindexer.util.zookeeper.StateWatchingZooKeeper;
+import com.ngdata.hbaseindexer.util.http.HttpUtil;
 import com.ngdata.sep.util.io.Closer;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 import com.ngdata.sep.util.zookeeper.ZooKeeperOperation;
@@ -36,6 +37,7 @@ import java.io.IOException;
 public abstract class BaseIndexCli extends BaseCli {
     private OptionSpec<String> zkOption;
     protected OptionSpec<String> httpOption;
+    protected OptionSpec<String> jaasOption;
     private String zkConnectionString;
     protected Configuration conf;
     protected ZooKeeperItf zk;
@@ -56,7 +58,12 @@ public abstract class BaseIndexCli extends BaseCli {
         httpOption = parser
                         .acceptsAll(Lists.newArrayList("http"), "HTTP connection string.  If specified, will use the HTTP " +
                                 "interface rather than communciating directly with zookeeper")
-                        .withOptionalArg().ofType(String.class).describedAs("http-url");
+                        .withRequiredArg().ofType(String.class).describedAs("http-url");
+
+        jaasOption = parser
+                        .acceptsAll(Lists.newArrayList("jaas"), "JAAS configuration.  If specified, will use the jaas " +
+                                "configuration for either zookeeper or http itnerface")
+                        .withRequiredArg().ofType(String.class).describedAs("jaas-conf");
         return parser;
     }
 
@@ -80,6 +87,16 @@ public abstract class BaseIndexCli extends BaseCli {
             System.err.println();
         } else {
             zkConnectionString = zkOption.value(options);
+        }
+        if (options.has(jaasOption)) {
+            String jaas = jaasOption.value(options);
+            String currentProp = System.getProperty(HttpUtil.LOGIN_CONFIG_PROP);
+            if (currentProp == null) {
+                System.setProperty(HttpUtil.LOGIN_CONFIG_PROP, jaas);
+            } else {
+                System.err.println("System Property: " + HttpUtil.LOGIN_CONFIG_PROP + " set to: " + currentProp
+                    + " not null.  Ignoring --jaas option.");
+            }
         }
 
         connectWithZooKeeper();

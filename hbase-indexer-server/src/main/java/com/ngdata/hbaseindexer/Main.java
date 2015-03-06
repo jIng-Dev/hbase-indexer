@@ -43,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
+import org.apache.sentry.binding.hbaseindexer.rest.SentryIndexResource;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
@@ -50,7 +51,11 @@ import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.apache.sentry.binding.hbaseindexer.authz.HBaseIndexerAuthzBinding;
+import org.apache.sentry.binding.hbaseindexer.conf.HBaseIndexerAuthzConf;
 
+import java.io.File;
+import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
 public class Main {
@@ -141,11 +146,11 @@ public class Main {
                 indexerProcessRegistry, tablePool, conf);
 
         indexerSupervisor.init();
-        startHttpServer(conf);
+        startHttpServer(conf, hostname);
 
     }
 
-    private void startHttpServer(Configuration conf) throws Exception {
+    private void startHttpServer(Configuration conf, String hostname) throws Exception {
         server = new Server();
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
 
@@ -153,10 +158,11 @@ public class Main {
         log.debug("REST interface configured to run on port: " + httpPort);
         selectChannelConnector.setPort(httpPort);
         server.setConnectors(new Connector[]{selectChannelConnector});
-
         String restPackage = conf.get(ConfKeys.REST_RESOURCE_PACKAGE, "com/ngdata/hbaseindexer/compatrest");
         log.debug("REST interface package configured as: " + restPackage);
-        PackagesResourceConfig packagesResourceConfig = new PackagesResourceConfig(restPackage);
+        // make sure we pick up the message bodies independent of the resource package
+        final String messageBodyPackage = "com/ngdata/hbaseindexer/messagebody";
+        PackagesResourceConfig packagesResourceConfig = new PackagesResourceConfig(messageBodyPackage, restPackage);
 
         ServletHolder servletHolder = new ServletHolder(new ServletContainer(packagesResourceConfig));
         servletHolder.setName("HBase-Indexer");
@@ -172,9 +178,33 @@ public class Main {
           context.addFilter(HBaseIndexerAuthFilter.class, "*", Handler.REQUEST);
         context.addFilter(ErrorHandlerFilter.class, "*", Handler.REQUEST);
         context.getServletContext().setAttribute(HBaseIndexerAuthFilter.CONF_ATTRIBUTE, conf);
+        HBaseIndexerAuthzBinding binding = getAuthzBinding(conf, hostname);
+        if (binding != null) {
+          context.getServletContext().setAttribute(SentryIndexResource.SENTRY_BINDING, binding);
+        }
+
 
         server.setHandler(context);
         server.start();
+    }
+
+    private HBaseIndexerAuthzBinding getAuthzBinding(Configuration conf, String hostname) {
+        String sentrySiteLocation = conf.get(SentryIndexResource.SENTRY_SITE);
+        try {
+            if (sentrySiteLocation != null) {
+                URL sentrySiteURL = new File(sentrySiteLocation).toURI().toURL();
+                HBaseIndexerAuthzConf authzConf = new HBaseIndexerAuthzConf(sentrySiteURL);
+                // set the hostname to do principal translation
+                authzConf.set(HBaseIndexerAuthzConf.AuthzConfVars.PRINCIPAL_HOSTNAME.getVar(), hostname);
+                return new HBaseIndexerAuthzBinding(authzConf);
+            } else {
+                log.info("HBaseIndexerAuthzBinding not created because " + SentryIndexResource.SENTRY_SITE
+                    + " not set");
+            }
+        } catch (Exception ex) {
+            log.error("Unable to create HBaseIndexerAuthzBinding", ex);
+        }
+        return null;
     }
 
     private void setupMetrics(Configuration conf) {

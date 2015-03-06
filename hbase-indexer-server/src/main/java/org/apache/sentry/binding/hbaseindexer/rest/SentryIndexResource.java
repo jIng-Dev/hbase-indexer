@@ -22,6 +22,7 @@ import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionJsonSerDeser;
 import com.ngdata.hbaseindexer.servlet.HBaseIndexerAuthFilter;
 import com.ngdata.hbaseindexer.servlet.IndexerServerException;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -47,6 +48,7 @@ import org.apache.sentry.binding.hbaseindexer.conf.HBaseIndexerAuthzConf;
 import org.apache.sentry.core.model.indexer.Indexer;
 import org.apache.sentry.core.model.indexer.IndexerModelAction;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.server.auth.KerberosName;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,47 +58,41 @@ import org.slf4j.LoggerFactory;
 public class SentryIndexResource extends CliCompatibleIndexResource {
   private static Logger log =
     LoggerFactory.getLogger(SentryIndexResource.class);
-  public static final String propertyName = "hbaseindexer.authorization.sentry.site";
+  public static final String SENTRY_SITE = "sentry.hbaseindexer.sentry.site";
+  public static final String SENTRY_BINDING = "sentry.hbaseindexer.binding";
   protected HBaseIndexerAuthzBinding authzBinding;
 
-  @Context
-  protected ServletContext servletContext;
-
-  public SentryIndexResource() {
-    Configuration conf = (Configuration)servletContext.getAttribute(HBaseIndexerAuthFilter.CONF_ATTRIBUTE);
-    String sentrySiteLocation = conf.get(propertyName);
-    try {
-      if (sentrySiteLocation != null) {
-        HBaseIndexerAuthzConf authzConf = new HBaseIndexerAuthzConf(new URL("file://" + sentrySiteLocation));
-        authzBinding = new HBaseIndexerAuthzBinding(authzConf);
-      } else {
-        log.info("HBaseIndexerAuthzBinding not created because " + propertyName
-          + " not set");
-      }
-    } catch (Exception ex) {
-      log.error("Unable to create HBaseIndexerAuthzBinding", ex);
+  public SentryIndexResource(@Context ServletContext context) {
+    if (context.getAttribute(SENTRY_BINDING) != null) {
+      authzBinding = (HBaseIndexerAuthzBinding)context.getAttribute(SENTRY_BINDING);
     }
   }
 
   /**
-* see {@link CliCompatibleIndexerResource#get}
-*/
+   * see {@link CliCompatibleIndexerResource#get}
+   */
   @GET
   @Produces("application/json")
+  @Override
   public Collection<IndexerDefinition> get(@Context UriInfo uriInfo, @Context SecurityContext securityContext) throws IndexerServerException {
     if (authzBinding == null) {
       throwNullBindingException();
     }
-    Collection<IndexerDefinition> indexers = super.get(uriInfo);
-    return authzBinding.filterIndexers(getSubject(securityContext), indexers);
+    Collection<IndexerDefinition> indexers = super.get(uriInfo, securityContext);
+    try {
+      return authzBinding.filterIndexers(getSubject(securityContext), indexers);
+    } catch (SentryHBaseIndexerAuthorizationException e) {
+      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, e);
+    }
   }
 
   /**
-* see {@link CliCompatibleIndexerResource#delete}
-*/
+   * see {@link CliCompatibleIndexerResource#delete}
+   */
   @DELETE
   @Produces("application/json")
   @Path("{name}")
+  @Override
   public byte[] delete(@Context SecurityContext securityContext, @PathParam("name") String indexerName) throws IndexerServerException, InterruptedException, KeeperException {
     if (authzBinding == null) {
       throwNullBindingException();
@@ -106,16 +102,17 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
     } catch (SentryHBaseIndexerAuthorizationException e) {
       throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, e);
     }
-    return super.delete(indexerName);
+    return super.delete(securityContext, indexerName);
   }
 
   /**
-* see {@link CliCompatibleIndexerResource#put}
-*/
+   * see {@link CliCompatibleIndexerResource#put}
+   */
   @PUT
   @Path("{name}")
   @Consumes("application/json")
   @Produces("application/json")
+  @Override
   public byte[] put(@Context SecurityContext securityContext, @PathParam("name") String indexName, byte [] jsonBytes) throws IndexerServerException {
     if (authzBinding == null) {
       throwNullBindingException();
@@ -125,15 +122,16 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
     } catch (SentryHBaseIndexerAuthorizationException e) {
       throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, e);
     }
-    return super.put(indexName, jsonBytes);
+    return super.put(securityContext, indexName, jsonBytes);
   }
 
   /**
-* see {@link CliCompatibleIndexerResource#post}
-*/
+   * see {@link CliCompatibleIndexerResource#post}
+   */
   @POST
   @Consumes("application/json")
   @Produces("application/json")
+  @Override
   public byte[] post(@Context SecurityContext securityContext, byte [] jsonBytes) throws IndexerServerException {
     if (authzBinding == null) {
       throwNullBindingException();
@@ -144,12 +142,19 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
     } catch (SentryHBaseIndexerAuthorizationException e) {
       throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, e);
     }
-    return super.post(jsonBytes);
+    return super.post(securityContext, jsonBytes);
   }
 
-  private Subject getSubject(SecurityContext securityContext) {
-    return securityContext.getUserPrincipal() != null ?
-      new Subject(securityContext.getUserPrincipal().getName()) : null;
+  private Subject getSubject(SecurityContext securityContext)
+  throws SentryHBaseIndexerAuthorizationException {
+    String princ = securityContext.getUserPrincipal() != null ?
+      securityContext.getUserPrincipal().getName() : null;
+    KerberosName kerbName = new KerberosName(princ);
+    try {
+      return new Subject(kerbName.getShortName());
+    } catch (IOException e) {
+      throw new SentryHBaseIndexerAuthorizationException("Unable to get subject", e);
+    }
   }
 
   private IndexerDefinition getIndexerFromJson(byte [] jsonBytes) throws IndexerServerException {

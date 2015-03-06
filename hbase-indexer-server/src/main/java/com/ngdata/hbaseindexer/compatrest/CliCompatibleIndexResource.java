@@ -26,6 +26,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.util.Collection;
@@ -91,7 +92,7 @@ public class CliCompatibleIndexResource {
      */
     @GET
     @Produces("application/json")
-    public Collection<IndexerDefinition> get(@Context UriInfo uriInfo) throws IndexerServerException {
+    public Collection<IndexerDefinition> get(@Context UriInfo uriInfo, @Context SecurityContext securityContext) throws IndexerServerException {
       return getModel().getIndexers();
     }
 
@@ -101,7 +102,7 @@ public class CliCompatibleIndexResource {
     @DELETE
     @Produces("application/json")
     @Path("{name}")
-    public byte[] delete(@PathParam("name") String indexerName) throws IndexerServerException, InterruptedException, KeeperException {
+    public byte[] delete(@Context SecurityContext securityContext, @PathParam("name") String indexerName) throws IndexerServerException, InterruptedException, KeeperException {
       if (!getModel().hasIndexer(indexerName)) {
         throw new IndexerServerException(HttpServletResponse.SC_BAD_REQUEST,
           new IndexerNotFoundException("Indexer does not exist: " + indexerName));
@@ -139,7 +140,7 @@ public class CliCompatibleIndexResource {
    @Path("{name}")
    @Consumes("application/json")
    @Produces("application/json")
-   public byte[] put(@PathParam("name") String indexName, byte [] jsonBytes) throws IndexerServerException {
+   public byte[] put(@Context SecurityContext securityContext, @PathParam("name") String indexName, byte [] jsonBytes) throws IndexerServerException {
      WriteableIndexerModel model = getModel();
 
      if (!model.hasIndexer(indexName)) {
@@ -198,7 +199,7 @@ public class CliCompatibleIndexResource {
    @POST
    @Consumes("application/json")
    @Produces("application/json")
-   public byte[] post(byte [] jsonBytes) throws IndexerServerException {
+   public byte[] post(@Context SecurityContext securityContext, byte [] jsonBytes) throws IndexerServerException {
      WriteableIndexerModel model = getModel();
 
      IndexerDefinitionBuilder builder = getBuilderFromJson(jsonBytes, null);

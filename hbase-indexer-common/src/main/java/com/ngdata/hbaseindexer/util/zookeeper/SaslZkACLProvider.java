@@ -25,10 +25,15 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 
 /**
- * ACLProvider that sets all ACLs to be owned by hbase (via sasl)
- * and readable by world.
+ * ACLProvider that sets all ACLs to be owned by a configurable user
+ * (typically hbase) via sasl auth, and readable by world.
  */
 public class SaslZkACLProvider implements ACLProvider {
+  private String saslUser;
+
+  public SaslZkACLProvider(String saslUser) {
+    this.saslUser = saslUser;
+  }
 
   @Override
   public List<ACL> getAclForPath(String path) {
@@ -38,7 +43,7 @@ public class SaslZkACLProvider implements ACLProvider {
   @Override
   public List<ACL> getDefaultAcl() {
     List<ACL> result = new ArrayList<ACL>();
-    result.add(new ACL(ZooDefs.Perms.ALL, new Id("sasl", "hbase")));
+    result.add(new ACL(ZooDefs.Perms.ALL, new Id("sasl", saslUser)));
     result.add(new ACL(ZooDefs.Perms.READ, ZooDefs.Ids.ANYONE_ID_UNSAFE));
     return result;
   }

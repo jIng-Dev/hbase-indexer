@@ -174,6 +174,11 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
             }
             LOG.trace("Mapper configuration:\n{}", Joiner.on("\n").join(map.entrySet()));
         }
+        
+        if (LOG.isTraceEnabled()) {
+          TreeMap map = new TreeMap(System.getProperties());
+          LOG.trace("Java System Properties:\n{}", Joiner.on("\n").join(map.entrySet()));
+        }
 
         String indexName = context.getConfiguration().get(INDEX_NAME_CONF_KEY);
         String indexerComponentFactory = context.getConfiguration().get(INDEX_COMPONENT_FACTORY_KEY);

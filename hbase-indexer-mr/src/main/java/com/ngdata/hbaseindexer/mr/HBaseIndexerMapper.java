@@ -24,6 +24,7 @@ import static com.ngdata.hbaseindexer.util.solr.SolrConnectionParamUtil.getSolrM
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Map;
@@ -178,6 +179,7 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
         if (LOG.isTraceEnabled()) {
           TreeMap map = new TreeMap(System.getProperties());
           LOG.trace("Java System Properties:\n{}", Joiner.on("\n").join(map.entrySet()));
+          LOG.trace("JVM Arguments: {}", ManagementFactory.getRuntimeMXBean().getInputArguments());
         }
 
         String indexName = context.getConfiguration().get(INDEX_NAME_CONF_KEY);

@@ -43,7 +43,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.sentry.binding.hbaseindexer.rest.SentryIndexResource;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
@@ -54,7 +53,6 @@ import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.apache.sentry.binding.hbaseindexer.authz.HBaseIndexerAuthzBinding;
 import org.apache.sentry.binding.hbaseindexer.conf.HBaseIndexerAuthzConf;
-import org.apache.zookeeper.server.auth.KerberosName;
 
 import java.io.File;
 import java.net.URL;
@@ -129,8 +127,7 @@ public class Main {
         boolean kerberosEnabled = "kerberos".equals(conf.get(HBaseIndexerAuthFilter.HBASEINDEXER_PREFIX + "type"));
         ACLProvider aclProvider = null;
         if (kerberosEnabled) {
-          String princName = getPrincipalName(conf, hostname);
-          aclProvider = new SaslZkACLProvider(princName);
+          aclProvider = new SaslZkACLProvider(conf, hostname);
         } else {
           aclProvider = new DefaultACLProvider();
         }
@@ -213,17 +210,6 @@ public class Main {
             log.error("Unable to create HBaseIndexerAuthzBinding", ex);
         }
         return null;
-    }
-
-    private String getPrincipalName(Configuration conf, String hostname) throws Exception {
-        // essentially running as an HBase RegionServer
-        String principalProp = conf.get("hbase.regionserver.kerberos.principal");
-        if (principalProp != null) {
-            String princ = SecurityUtil.getServerPrincipal(principalProp, hostname);
-            KerberosName kerbName = new KerberosName(princ);
-            return kerbName.getShortName();
-        }
-        return "hbase";
     }
 
     private void setupMetrics(Configuration conf) {

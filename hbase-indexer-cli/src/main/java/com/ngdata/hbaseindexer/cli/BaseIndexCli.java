@@ -101,7 +101,9 @@ public abstract class BaseIndexCli extends BaseCli {
 
         connectWithZooKeeper();
 
-        model = new IndexerModelImpl(zk, conf.get(ConfKeys.ZK_ROOT_NODE));
+        if (!options.has(httpOption)) {
+            model = new IndexerModelImpl(zk, conf.get(ConfKeys.ZK_ROOT_NODE));
+        }
     }
 
     @Override

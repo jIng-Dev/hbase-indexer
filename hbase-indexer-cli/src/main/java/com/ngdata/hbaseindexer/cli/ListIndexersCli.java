@@ -29,21 +29,18 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.ngdata.hbaseindexer.model.api.BatchBuildInfo;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
+import com.ngdata.hbaseindexer.model.api.IndexerDefinitionBuilder;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinitionNameComparator;
 import com.ngdata.hbaseindexer.model.api.IndexerModel;
 import com.ngdata.hbaseindexer.model.api.IndexerProcess;
 import com.ngdata.hbaseindexer.model.api.IndexerProcessRegistry;
 import com.ngdata.hbaseindexer.model.impl.IndexerProcessRegistryImpl;
-import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionJsonSerDeser;
+import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionsJsonSerDeser;
 import com.ngdata.hbaseindexer.util.http.HttpUtil;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.zookeeper.KeeperException;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
 import org.joda.time.DateTime;
 
 /**
@@ -195,19 +192,12 @@ public class ListIndexersCli extends BaseIndexCli {
     }
 
     private List<IndexerDefinition> getIndexersHttp(OptionSet options) throws Exception {
-        List<IndexerDefinition> indexers = new ArrayList<IndexerDefinition>();
         HttpGet httpGet = new HttpGet(httpOption.value(options));
         byte [] response = HttpUtil.sendRequest(httpGet);
-        ArrayNode node;
-        try {
-          node = (ArrayNode) new ObjectMapper().readTree(new ByteArrayInputStream(response));
-        } catch (IOException e) {
-          throw new RuntimeException("Error parsing indexer definition JSON.", e);
-        }
-        Iterator<JsonNode> it = node.getElements();
-        while (it.hasNext()) {
-          JsonNode nextNode = it.next();
-          indexers.add(IndexerDefinitionJsonSerDeser.INSTANCE.fromJson((ObjectNode)nextNode).build());
+        List<IndexerDefinitionBuilder> builders = IndexerDefinitionsJsonSerDeser.INSTANCE.fromJsonBytes(response);
+        List<IndexerDefinition> indexers = new ArrayList<IndexerDefinition>();
+        for (IndexerDefinitionBuilder builder : builders) {
+          indexers.add(builder.build());
         }
         return indexers;
     }

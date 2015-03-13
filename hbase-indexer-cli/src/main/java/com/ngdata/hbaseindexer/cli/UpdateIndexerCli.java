@@ -18,10 +18,14 @@ package com.ngdata.hbaseindexer.cli;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinitionBuilder;
 import com.ngdata.hbaseindexer.model.api.IndexerModel;
+import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionsJsonSerDeser;
+
 import com.ngdata.hbaseindexer.model.impl.UpdateIndexerInputJsonSerDeser;
 import com.ngdata.hbaseindexer.model.impl.UpdateIndexerInputJsonSerDeser.UpdateIndexerInput;
 import com.ngdata.hbaseindexer.util.http.HttpUtil;
+import java.util.List;
 import joptsimple.OptionSet;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ByteArrayEntity;
 
@@ -78,17 +82,34 @@ public class UpdateIndexerCli extends AddOrUpdateIndexerCli {
     }
 
     private void updateIndexerHttp(OptionSet options, String indexerName) throws Exception {
-        IndexerDefinition indexer = model.getFreshIndexer(indexerName);
+        String path = httpOption.value(options);
+        IndexerDefinition indexer = getFreshIndexer(indexerName, path);
+        if (indexer == null) {
+            throw new CliException("Indexer does not exist: " + indexerName);
+        }
 
         IndexerDefinitionBuilder builder = buildIndexerDefinition(options, indexer);
         IndexerDefinition newIndexer = builder.build();
 
         UpdateIndexerInput input = new UpdateIndexerInput(newIndexer, indexer);
         byte [] jsonBytes = UpdateIndexerInputJsonSerDeser.INSTANCE.toJsonBytes(input);
-        String path = httpOption.value(options);
-        path += (path.endsWith("/")?"":"/") + indexerName;
-        HttpPut httpPut = new HttpPut(path);
+        String putPath = path + (path.endsWith("/")?"":"/") + indexerName;
+        HttpPut httpPut = new HttpPut(putPath);
         httpPut.setEntity(new ByteArrayEntity(jsonBytes));
         byte [] response = HttpUtil.sendRequest(httpPut);
+    }
+
+    private IndexerDefinition getFreshIndexer(String indexerName, String path) throws Exception {
+        // FixMe: should we have an individual GetIndexer command so we don't have to iterate?
+        HttpGet httpGet = new HttpGet(path);
+        byte [] response = HttpUtil.sendRequest(httpGet);
+        List<IndexerDefinitionBuilder> builders = IndexerDefinitionsJsonSerDeser.INSTANCE.fromJsonBytes(response);
+        for (IndexerDefinitionBuilder builder : builders) {
+            IndexerDefinition def = builder.build();
+            if (indexerName.equals(def.getName())) {
+              return def;
+            }
+        }
+        return null;
     }
 }

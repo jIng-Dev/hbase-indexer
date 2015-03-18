@@ -56,6 +56,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
@@ -70,10 +71,12 @@ public class ReplicationStatusRetriever {
     private final FileSystem fileSystem;
     private final Path hbaseRootDir;
     private final Path hbaseOldLogDir;
+    private final boolean useSSL;
     public static final int HBASE_JMX_PORT = 10102;
 
-    public ReplicationStatusRetriever(ZooKeeperItf zk, int hbaseMasterPort) throws InterruptedException, IOException, KeeperException {
+    public ReplicationStatusRetriever(ZooKeeperItf zk, int hbaseMasterPort, boolean useSSL) throws InterruptedException, IOException, KeeperException {
         this.zk = zk;
+        this.useSSL = useSSL;
 
         Configuration conf = getHBaseConf(zk, hbaseMasterPort);
 
@@ -93,9 +96,19 @@ public class ReplicationStatusRetriever {
         byte[] masterServerName = removeMetaData(zk.getData("/hbase/master", false, new Stat()));
         String hbaseMasterHostName = getServerName(masterServerName).getHostname();
 
-        String url = String.format("http://%s:%d/conf", hbaseMasterHostName, hbaseMasterPort);
+        String ulrScheme = (useSSL) ? "https" : "http" ;
+        String url = String.format("%s://%s:%d/conf", ulrScheme, hbaseMasterHostName, hbaseMasterPort);
         System.out.println("Reading HBase configuration from " + url);
-        byte[] data = readUrl(url);
+        byte[] data = null;
+
+        try {
+          data = readUrl(url);
+        } catch (ClientProtocolException ex) {
+          if(!useSSL) {
+            System.out.println("Hint : Please check if HBASE is configured with SSL. If yes then use --use-ssl option");
+          }
+          throw ex;
+        }
 
         Configuration conf = new Configuration();
         conf.addResource(new ByteArrayInputStream(data));

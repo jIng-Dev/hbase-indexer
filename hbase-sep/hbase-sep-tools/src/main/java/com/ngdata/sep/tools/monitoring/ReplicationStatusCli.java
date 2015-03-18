@@ -48,6 +48,8 @@ public class ReplicationStatusCli {
                 .acceptsAll(ImmutableList.of("hbase-master-port"), "HBase Master web ui port number")
                 .withRequiredArg().ofType(Integer.class)
                 .defaultsTo(60010);
+        OptionSpec<Void> useSSL = parser
+            .acceptsAll(ImmutableList.of("use-ssl"), "Use SSL/TLS while communicating with HBase Master web ui");
 
         OptionSet options = null;
         try {
@@ -65,7 +67,7 @@ public class ReplicationStatusCli {
         System.out.println("Connecting to Zookeeper " + zkConnectString + "...");
         ZooKeeperItf zk = ZkUtil.connect(zkConnectString, 30000);
 
-        ReplicationStatusRetriever retriever = new ReplicationStatusRetriever(zk, options.valueOf(hbaseMasterPortOption));
+        ReplicationStatusRetriever retriever = new ReplicationStatusRetriever(zk, options.valueOf(hbaseMasterPortOption), options.has(useSSL));
         ReplicationStatus replicationStatus = retriever.collectStatusFromZooKeepeer();
 
         if (enableJmx) {

@@ -65,6 +65,8 @@ public class ReplicationWaitCli {
                 .acceptsAll(ImmutableList.of("hbase-master-port"), "HBase Master web ui port number")
                 .withRequiredArg().ofType(Integer.class)
                 .defaultsTo(60010);
+        OptionSpec<Void> useSSL = parser
+            .acceptsAll(ImmutableList.of("use-ssl"), "Use SSL/TLS while communicating with HBase Master web ui");
 
         OptionSet options = null;
         try {
@@ -88,13 +90,13 @@ public class ReplicationWaitCli {
 
         System.out.println("Connecting to Zookeeper " + zkConnectString + "...");
         ZooKeeperItf zk = ZkUtil.connect(zkConnectString, 30000);
-        waitUntilReplicationDone(zk, options.valueOf(hbaseMasterPortOption));
+        waitUntilReplicationDone(zk, options.valueOf(hbaseMasterPortOption), options.has(useSSL));
 
         Closer.close(zk);
     }
 
-    public void waitUntilReplicationDone(ZooKeeperItf zk, int hbaseMasterPort) throws Exception {
-        ReplicationStatusRetriever retriever = new ReplicationStatusRetriever(zk, hbaseMasterPort);
+    public void waitUntilReplicationDone(ZooKeeperItf zk, int hbaseMasterPort, boolean useSSL) throws Exception {
+        ReplicationStatusRetriever retriever = new ReplicationStatusRetriever(zk, hbaseMasterPort, useSSL);
 
         DateTime startedAt = new DateTime();
         ReplicationStatus prevReplicationStatus = null;

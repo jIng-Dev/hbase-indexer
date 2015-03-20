@@ -305,7 +305,29 @@ class HBaseIndexerArgumentParser {
                         "  --hbase-indexer-zk zk01 \\\n" +
                         "  --hbase-indexer-name docindexer \\\n" +
                         "  --go-live \\\n" +
-                        "  --log4j src/test/resources/log4j.properties\n\n"); 
+                        "  --log4j src/test/resources/log4j.properties\n\n" +
+
+                        "# MapReduce on Yarn - Pass custom JVM arguments\n" +
+                        "HADOOP_CLIENT_OPTS='-DmaxConnectionsPerHost=10000 -DmaxConnections=10000'; \\\n" +
+                        "hadoop --config /etc/hadoop/conf \\\n" +
+                        "  jar hbase-indexer-mr-*-job.jar \\\n" +
+                        "  --conf /etc/hbase/conf/hbase-site.xml \\\n" +
+                        "  -D 'mapreduce.map.java.opts=-DmaxConnectionsPerHost=10000 -DmaxConnections=10000' \\\n" +
+                        "  -D 'mapreduce.reduce.java.opts=-DmaxConnectionsPerHost=10000 -DmaxConnections=10000' \\\n" +
+                        "  --hbase-indexer-zk zk01 \\\n" +
+                        "  --hbase-indexer-name docindexer \\\n" +
+                        "  --go-live \\\n" +
+                        "  --log4j src/test/resources/log4j.properties\n\n" +
+
+                        "# MapReduce on MR1 - Pass custom JVM arguments\n" +
+                        "HADOOP_CLIENT_OPTS='-DmaxConnectionsPerHost=10000 -DmaxConnections=10000'; \\\n" +
+                        "hadoop --config /etc/hadoop/conf \\\n" +
+                        "  jar hbase-indexer-mr-*-job.jar \\\n" +
+                        "  --conf /etc/hbase/conf/hbase-site.xml \\\n" +
+                        "  -D 'mapreduce.child.java.opts=-DmaxConnectionsPerHost=10000 -DmaxConnections=10000' \\\n" +
+                        "  --hbase-indexer-zk zk01 \\\n" + "  --hbase-indexer-name docindexer \\\n" +
+                        "  --go-live \\\n" +
+                        "  --log4j src/test/resources/log4j.properties\n\n");
 
                       throw new FoundHelpArgument(); // Trick to prevent processing of any remaining arguments
                     }

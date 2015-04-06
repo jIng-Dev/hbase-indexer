@@ -21,7 +21,7 @@
   <parent>
     <groupId>com.cloudera.cdh</groupId>
     <artifactId>cdh-root</artifactId>
-    <version>5.2.5-SNAPSHOT</version>
+    <version>5.2.6-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -54,7 +54,7 @@
   <groupId>com.ngdata</groupId>
   <artifactId>hbase-indexer</artifactId>
   <packaging>pom</packaging>
-  <version>1.5-cdh5.2.5-SNAPSHOT</version>
+  <version>1.5-cdh5.2.6-SNAPSHOT</version>
   <name>HBase Indexer</name>
 
   <url>http://www.ngdata.com/</url>
@@ -445,7 +445,7 @@
           <dependency>
             <groupId>com.ngdata</groupId>
             <artifactId>hbase-sep-impl</artifactId>
-            <version>1.5-hbase0.94-cdh5.2.5-SNAPSHOT</version>
+            <version>1.5-hbase0.94-cdh5.2.6-SNAPSHOT</version>
           </dependency>
 
           <!-- We have to explicitly manage Hadoop dependencies here, since they are optional in HBase -->
@@ -521,7 +521,7 @@
           <dependency>
             <groupId>com.ngdata</groupId>
             <artifactId>hbase-sep-impl</artifactId>
-            <version>1.5-hbase0.95-cdh5.2.5-SNAPSHOT</version>
+            <version>1.5-hbase0.95-cdh5.2.6-SNAPSHOT</version>
           </dependency>
 
           <!-- We have to explicitly manage Hadoop dependencies here, since they are optional in HBase -->
@@ -605,7 +605,7 @@
           <dependency>
             <groupId>com.ngdata</groupId>
             <artifactId>hbase-sep-impl</artifactId>
-            <version>1.5-hbase0.98-cdh5.2.5-SNAPSHOT</version>
+            <version>1.5-hbase0.98-cdh5.2.6-SNAPSHOT</version>
           </dependency>
 
          <dependency>

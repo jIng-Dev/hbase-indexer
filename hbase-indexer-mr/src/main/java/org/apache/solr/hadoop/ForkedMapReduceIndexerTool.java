@@ -62,6 +62,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -955,8 +959,14 @@ public class ForkedMapReduceIndexerTool extends Configured implements Tool {
             return -1;
         }
 
-        if (options.goLive && !new GoLive().goLive(options, listSortedOutputShardDirs(job, outputResultsDir, fs))) {
-            return -1;
+        if (options.goLive) {
+            // give the solr process acls to read/execute the results directory, which is necessary
+            // for the go-live phase.  Otherwise, if the client is running with a restrictive umask
+            // (e.g. 077), solr may be unable to read the directory in order to do the merge.
+            modifyAclsForGoLive(options.outputDir, outputResultsDir, fs);
+            if (!new GoLive().goLive(options, listSortedOutputShardDirs(job, outputResultsDir, fs))) {
+                return -1;
+            }
         }
 
         goodbye(job, programStartTime);
@@ -1384,6 +1394,73 @@ public class ForkedMapReduceIndexerTool extends Configured implements Tool {
             LOG.error("Cannot delete " + path);
         }
         return success;
+    }
+
+    /**
+     * Recursively sets ACLS on the follow paths:
+     * a) outputDir, non-recursively
+     * b) resultsDir, recursively
+     *
+     * The following ACLs are set on the above paths:
+     * 1) user:solr:r-x
+     * This is necessary so that solr can read the results directory during go-live.  "solr"
+     * can be overridden by setting the "solr.authorization.superuser" System property.
+     *
+     * 2) mask::rwx
+     * The user ACL is filtered via the mask, so we set this explicitly so we are guaranteed
+     * that the user ACL is effective.  rwx vs r-w seems somewhat arbitrary; we use rwx so
+     * that we are not adding additional restrictions over what the configuration specifies.
+     *
+     * Note 1: A failure to set an ACL (for example, if acls are disabled on the NameNode)
+     * will only result in a log warning, because it is possible go-live is successful
+     * without the acls applied.
+     *
+     * Note 2: Ideally we would just set default ACLs on path that would be automatically applied
+     * on subdirectory/file creation.  However, the transformation from default mask to mask
+     * is filtered by the umask, so is not effective under a restrictive umask.  This is an HDFS
+     * bug, see https://issues.apache.org/jira/browse/HDFS-6962.
+     */
+    private static void modifyAclsForGoLive(Path outputDir, Path resultsDir, FileSystem fs) {
+        // let's allow users to disable this if they want to avoid the warning or
+        // something unexpected happens
+        boolean skip = Boolean.parseBoolean(System.getProperty("hbbi.skipAddHdfsAcls", "false"));
+        if (!skip) {
+            // in case the solr process is running as a different user
+            String user = System.getProperty("solr.authorization.superuser", "solr");
+            try {
+                modifyAclsForGoLive(outputDir, fs, user);
+                recursiveModifyAclsForGoLive(resultsDir, fs, user);
+            } catch (IOException ioe) {
+                LOG.warn("Unable to set acl for user: " + user + ", --go-live may fail", ioe);
+            }
+        }
+    }
+
+    private static void recursiveModifyAclsForGoLive(Path path, FileSystem fs, String user) throws IOException {
+        // try to set the acl on path first so that if there is an error, we can exit
+        // quickly (for example, if acls are not enabled on the namenode).
+        modifyAclsForGoLive(path, fs, user);
+
+        for (FileStatus status : fs.listStatus(path)) {
+            modifyAclsForGoLive(status.getPath(), fs, user);
+            if (status.isDirectory()) {
+                recursiveModifyAclsForGoLive(status.getPath(), fs, user);
+            }
+        }
+    }
+
+    private static void modifyAclsForGoLive(Path path, FileSystem fs, String user) throws IOException {
+        AclEntry accessAcl = buildAcl(AclEntryType.USER, user,
+            FsAction.READ_EXECUTE, AclEntryScope.ACCESS);
+        AclEntry maskAccessAcl = buildAcl(AclEntryType.MASK, null,
+            FsAction.ALL, AclEntryScope.ACCESS);
+        fs.modifyAclEntries(path, Arrays.asList(accessAcl, maskAccessAcl));
+    }
+
+    private static AclEntry buildAcl(AclEntryType type, String name, FsAction action, AclEntryScope scope) {
+        AclEntry.Builder builder = new AclEntry.Builder();
+        builder.setType(type).setName(name).setPermission(action).setScope(scope);
+        return builder.build();
     }
 
     // same as IntMath.divide(p, q, RoundingMode.CEILING)

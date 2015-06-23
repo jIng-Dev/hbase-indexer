@@ -54,7 +54,7 @@
   <groupId>com.ngdata</groupId>
   <artifactId>hbase-indexer</artifactId>
   <packaging>pom</packaging>
-  <version>1.5-cdh5.3.5-SNAPSHOT</version>
+  <version>1.5-cdh5.3.6-SNAPSHOT-SNAPSHOT</version>
   <name>HBase Indexer</name>
 
   <url>http://www.ngdata.com/</url>
@@ -620,7 +620,7 @@
           <dependency>
             <groupId>com.ngdata</groupId>
             <artifactId>hbase-sep-impl</artifactId>
-            <version>1.5-hbase0.98-cdh5.3.5-SNAPSHOT</version>
+            <version>1.5-hbase0.98-cdh5.3.6-SNAPSHOT-SNAPSHOT</version>
           </dependency>
 
          <dependency>

@@ -201,6 +201,7 @@
           <name>hbase.api</name>
           <value>1.0</value>
         </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
 
       <dependencies>

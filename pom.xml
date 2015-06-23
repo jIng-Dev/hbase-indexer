@@ -466,7 +466,8 @@
       <id>0.94</id>
       <activation>
         <property>
-          <name>!hbase.api</name>
+          <name>hbase.api</name>
+          <value>0.94</value>
         </property>
       </activation>
 
@@ -795,6 +796,7 @@
           <name>hbase.api</name>
           <value>1.0</value>
         </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
 
       <dependencyManagement>

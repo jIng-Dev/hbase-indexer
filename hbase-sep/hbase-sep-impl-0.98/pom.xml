@@ -19,13 +19,13 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ngdata</groupId>
   <artifactId>hbase-sep-impl</artifactId>
-  <version>1.5-hbase0.98-cdh5.4.8-SNAPSHOT</version>  
+  <version>1.5-hbase0.98-cdh5.4.7</version>  
   <name>HBase Side-Effect Processor: impl for HBase 0.98</name>
 
   <parent>
     <groupId>com.ngdata</groupId>
     <artifactId>hbase-sep</artifactId>
-    <version>1.5-cdh5.4.8-SNAPSHOT</version>
+    <version>1.5-cdh5.4.7</version>
     <relativePath>../</relativePath>
   </parent>
 
@@ -46,13 +46,13 @@
     <dependency>
       <groupId>com.ngdata</groupId>
       <artifactId>hbase-sep-impl-common</artifactId>
-      <version>1.5-cdh5.4.8-SNAPSHOT</version>
+      <version>1.5-cdh5.4.7</version>
     </dependency>
 
     <dependency>
       <groupId>com.ngdata</groupId>
       <artifactId>hbase-sep-api</artifactId>
-      <version>1.5-cdh5.4.8-SNAPSHOT</version>
+      <version>1.5-cdh5.4.7</version>
     </dependency>
 
     <dependency>

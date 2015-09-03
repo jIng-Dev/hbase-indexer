@@ -174,6 +174,11 @@ public class BaseHRegionServer implements AdminProtos.AdminService.BlockingInter
   }
   
   @Override
+  public org.apache.hadoop.hbase.ChoreService getChoreService() {
+     throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse updateConfiguration(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest request)

@@ -30,7 +30,7 @@
   </parent>
 
   <properties>
-    <hadoop.version>${version.hadoop.mr1.hbase10}</hadoop.version>
+    <hadoop.version>${version.hadoop.mr1.hbase12}</hadoop.version>
   </properties>
 
   <dependencies>
@@ -107,7 +107,7 @@
     <profile>
       <id>yarn</id>
       <properties>
-        <hadoop.version>${version.hadoop.hbase10}</hadoop.version>
+        <hadoop.version>${version.hadoop.hbase12}</hadoop.version>
       </properties>
     </profile>
     
@@ -298,6 +298,57 @@
           <type>test-jar</type>
           <scope>test</scope>
           <version>${version.hbase10}</version>
+        </dependency>
+      </dependencies>  
+    </profile>
+
+    <profile>
+      <id>1.2</id>
+      <activation>
+        <property>
+          <name>hbase.api</name>
+          <value>1.2</value>
+        </property>
+      </activation>
+
+      <properties>
+        <log4j.properties.file>log4j-1.0.properties</log4j.properties.file>
+      </properties>
+
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-server</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+          <version>${version.hbase12}</version>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-hadoop2-compat</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+          <version>${version.hbase12}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-hadoop-compat</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+          <version>${version.hbase12}</version>
         </dependency>
       </dependencies>  
     </profile>

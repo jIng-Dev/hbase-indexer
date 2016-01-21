@@ -29,17 +29,21 @@
     <version.guava>11.0.2</version.guava>
     <version.joda-time>1.6</version.joda-time>
     <version.slf4j>${cdh.slf4j.version}</version.slf4j>
+    <!-- Redundant properties to keep things close to upstream code. -->
     <version.hbase94>0.94.6-cdh4.4.0</version.hbase94>
     <version.hbase95>${cdh.hbase.version}</version.hbase95>
     <version.hbase98>${cdh.hbase.version}</version.hbase98>
     <version.hbase10>${cdh.hbase.version}</version.hbase10>
+    <version.hbase12>${cdh.hbase.version}</version.hbase12>
     <version.hadoop.hbase95>${cdh.hadoop.version}</version.hadoop.hbase95>
     <version.hadoop.hbase98>${cdh.hadoop.version}</version.hadoop.hbase98>
     <version.hadoop.hbase10>${cdh.hadoop.version}</version.hadoop.hbase10>
+    <version.hadoop.hbase12>${cdh.hadoop.version}</version.hadoop.hbase12>
     <version.hadoop.mr1>${cdh.mr1.version}</version.hadoop.mr1>
     <version.hadoop.mr1.hbase95>${cdh.mr1.version}</version.hadoop.mr1.hbase95>
     <version.hadoop.mr1.hbase98>${cdh.mr1.version}</version.hadoop.mr1.hbase98>
     <version.hadoop.mr1.hbase10>${cdh.mr1.version}</version.hadoop.mr1.hbase10>
+    <version.hadoop.mr1.hbase12>${cdh.mr1.version}</version.hadoop.mr1.hbase12>
     <version.hadoop>${cdh.hadoop.version}</version.hadoop>
     <version.zookeeper>${cdh.zookeeper.version}</version.zookeeper>
     <version.jackson>${cdh.jackson.version}</version.jackson>
@@ -48,6 +52,7 @@
     <version.search>${cdh.search.version}</version.search>
     <version.search.hbase98>${cdh.search.version}</version.search.hbase98>
     <version.search.hbase10>${cdh.search.version}</version.search.hbase10>
+    <version.search.hbase12>${cdh.search.version}</version.search.hbase12>
     <version.jersey>1.18.3</version.jersey>
 
     <!-- Tells maven plugins what file encoding to use -->
@@ -930,6 +935,173 @@
             <type>test-jar</type>
             <scope>test</scope>
             <version>${version.hbase10}</version>
+          </dependency>
+          
+        </dependencies>
+      </dependencyManagement>
+
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-server</artifactId>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-client</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-common</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>1.2</id>
+      <activation>
+        <property>
+          <name>hbase.api</name>
+          <value>1.2</value>
+        </property>
+      </activation>
+
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>com.ngdata</groupId>
+            <artifactId>hbase-sep-impl</artifactId>
+            <version>1.5-hbase1.2-cdh5.7.0-SNAPSHOT</version>
+          </dependency>
+
+         <dependency>
+           <groupId>com.cloudera.search</groupId>
+           <artifactId>search-mr</artifactId>
+           <version>${version.search.hbase12}</version>
+         </dependency>
+
+          <!-- We have to explicitly manage Hadoop dependencies here, since they are optional in HBase -->
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-test</artifactId>
+            <version>${version.hadoop.mr1.hbase12}</version>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${version.hadoop.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${version.hadoop.hbase12}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs</artifactId>
+            <version>${version.hadoop.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs</artifactId>
+            <version>${version.hadoop.hbase12}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minicluster</artifactId>
+            <version>${version.hadoop.hbase12}</version>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+            <version>${version.hadoop.mr1.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.kohsuke</groupId>
+            <artifactId>akuma</artifactId>
+            <version>1.9</version>
+          </dependency>
+          
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase</artifactId>
+            <version>${version.hbase12}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>stax</groupId>
+                <artifactId>stax-api</artifactId>
+                <!-- only necessary for Java < 6 -->
+              </exclusion>
+            </exclusions>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${version.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-server</artifactId>
+            <version>${version.hbase12}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-hdfs</artifactId> <!-- workaround for CDH-16604 -->
+              </exclusion>
+            </exclusions>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-common</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${version.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-server</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${version.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-client</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${version.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-client</artifactId>
+            <version>${version.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-hadoop2-compat</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${version.hbase12}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-hadoop-compat</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${version.hbase12}</version>
           </dependency>
           
         </dependencies>

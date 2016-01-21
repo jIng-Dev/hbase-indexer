@@ -91,6 +91,20 @@
         <module>hbase-sep-impl-1.0</module>
       </modules>
     </profile>
+
+    <profile>
+      <id>1.2</id>
+      <activation>
+        <property>
+          <name>hbase.api</name>
+          <value>1.2</value>
+        </property>
+      </activation>
+
+      <modules>
+        <module>hbase-sep-impl-1.2</module>
+      </modules>
+    </profile>
   </profiles>
 
   <build>

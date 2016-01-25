@@ -201,7 +201,6 @@
           <name>hbase.api</name>
           <value>1.0</value>
         </property>
-        <activeByDefault>true</activeByDefault>
       </activation>
 
       <dependencies>
@@ -233,6 +232,7 @@
           <name>hbase.api</name>
           <value>1.2</value>
         </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
 
       <dependencies>

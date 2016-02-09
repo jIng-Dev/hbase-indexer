@@ -39,4 +39,7 @@ public class ConfKeys {
 
     /** Package for REST resource. */
     public static final String REST_RESOURCE_PACKAGE = "hbaseindexer.rest.resource.package";
+
+    /** HTTP header buffer size. */
+    public static final String HTTP_HEADER_BUFFER_SIZE = "hbaseindexer.http.headerBufferSize";
 }

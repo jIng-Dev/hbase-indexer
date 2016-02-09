@@ -162,6 +162,7 @@ public class Main {
         int httpPort = conf.getInt(ConfKeys.HTTP_PORT, 11060);
         log.debug("REST interface configured to run on port: " + httpPort);
         selectChannelConnector.setPort(httpPort);
+        selectChannelConnector.setHeaderBufferSize(conf.getInt(ConfKeys.HTTP_HEADER_BUFFER_SIZE, 64 * 1024));
         server.setConnectors(new Connector[]{selectChannelConnector});
         String restPackage = conf.get(ConfKeys.REST_RESOURCE_PACKAGE, "com/ngdata/hbaseindexer/compatrest");
         log.debug("REST interface package configured as: " + restPackage);

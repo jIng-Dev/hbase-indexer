@@ -1,5 +1,6 @@
 # CLOUDERA-BUILD
 export JAVA7_BUILD=true
+export MAVEN_OPTS=${MAVEN_OPTS} -Xmx768m -XX:MaxPermSize=128m
 . /opt/toolchain/toolchain.sh
 
-mvn -Dhbase.api=1.0 clean compile test-compile
+mvn clean compile test-compile

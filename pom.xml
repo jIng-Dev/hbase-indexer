@@ -1223,6 +1223,7 @@
               <exclude>**/src/it/resources/**</exclude>
               <exclude>**/META-INF/services/**</exclude>
               <exclude>**/ForkedAlphaNumericComparator.java</exclude>
+              <exclude>PATCH.txt</exclude>
               <!-- MIT -->
             </excludes>
           </configuration>

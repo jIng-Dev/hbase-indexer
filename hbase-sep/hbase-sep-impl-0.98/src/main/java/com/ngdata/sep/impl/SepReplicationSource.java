@@ -15,72 +15,11 @@
  */
 package com.ngdata.sep.impl;
 
-import static com.ngdata.sep.impl.SepModelImpl.toExternalSubscriptionName;
-
-import java.io.IOException;
-import java.util.ServiceLoader;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.UUID;
-
-import com.ngdata.sep.WALEditFilter;
-import com.ngdata.sep.WALEditFilterProvider;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
-import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.replication.ReplicationPeers;
 
 /**
- * Custom replication source for distributing Side-Effect Processor (SEP) events to listeners
- * elsewhere on the cluster, as well as remaining compatible with stock HBase replication servers.
- * <p>
- * When a {@code SepReplicationSource} is replicating to a standard replication sink, all
- * replication entries are delegated to the stock HBase {@code ReplicationSource}. When a
- * {@code SepReplicationSource} is replicating to a custom SEP handler, the replication entries will
- * be filtered to only send the minimal necessary information for the remote SEP event processor.
+ * Retained for compatibility.
  */
 public class SepReplicationSource extends ReplicationSource {
-
-    private WALEditFilter walEditFilter;
-    private final Log log = LogFactory.getLog(getClass());
-
-    void setWALEditFilter(WALEditFilter walEditFilter) {
-        this.walEditFilter = walEditFilter;
-    }
-
-    WALEditFilter loadEditFilter(String peerClusterId, Iterable<WALEditFilterProvider> editFilterProviders) {
-        for (WALEditFilterProvider editFilterProvider : editFilterProviders) {
-            WALEditFilter editFilter = editFilterProvider.getWALEditFilter(toExternalSubscriptionName(peerClusterId));
-            if (editFilter != null) {
-                log.debug("Loaded WALEditFilter " + editFilter);
-                return editFilter;
-            }
-        }
-        log.debug("No custom WALEditFilter loaded");
-        return null;
-    }
-
-    @Override
-    public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager, 
-            ReplicationQueues queues, ReplicationPeers peers, Stoppable stopper,
-            String peerClusterZnode, UUID uuid) throws IOException {
-        super.init(conf, fs, manager, queues, peers, stopper, peerClusterZnode, uuid);
-        log.debug("init on cluster " + getPeerClusterId() + " on node " + getPeerClusterZnode());
-        setWALEditFilter(loadEditFilter(getPeerClusterId(), ServiceLoader.load(WALEditFilterProvider.class)));
-    }
-
-    @Override
-    protected void removeNonReplicableEdits(HLog.Entry edit) {
-        super.removeNonReplicableEdits(edit);
-        if (walEditFilter != null) {
-            walEditFilter.apply(edit);
-        }
-    }
 
 }

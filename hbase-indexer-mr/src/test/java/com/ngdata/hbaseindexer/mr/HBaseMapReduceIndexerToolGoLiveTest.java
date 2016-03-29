@@ -15,15 +15,17 @@
  */
 package com.ngdata.hbaseindexer.mr;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Map.Entry;
-
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Resources;
 import com.ngdata.hbaseindexer.conf.DefaultIndexerComponentFactory;
+import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
+import com.ngdata.hbaseindexer.model.api.IndexerDefinitionBuilder;
+import com.ngdata.hbaseindexer.model.impl.IndexerModelImpl;
+import com.ngdata.hbaseindexer.util.net.NetUtils;
+import com.ngdata.hbaseindexer.util.solr.SolrTestingUtility;
+import com.ngdata.sep.util.io.Closer;
+import com.ngdata.sep.util.zookeeper.ZkUtil;
+import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -46,16 +48,13 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Resources;
-import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
-import com.ngdata.hbaseindexer.model.api.IndexerDefinitionBuilder;
-import com.ngdata.hbaseindexer.model.impl.IndexerModelImpl;
-import com.ngdata.hbaseindexer.util.net.NetUtils;
-import com.ngdata.hbaseindexer.util.solr.SolrTestingUtility;
-import com.ngdata.sep.util.io.Closer;
-import com.ngdata.sep.util.zookeeper.ZkUtil;
-import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class HBaseMapReduceIndexerToolGoLiveTest {
 
@@ -287,7 +286,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
             "--fanout", "2",
             "--zk-host", SOLR_ZK,
             "--collection", "collection1",
-            "--log4j", new File(Resources.getResource("log4j-base.properties").toURI()).toString(),
+                "--log4j", new File(Resources.getResource("log4j.properties").toURI()).toString(),
             "--go-live-threads", "999",
             "--go-live");
         
@@ -306,7 +305,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
             "--fanout", "2",
             "--zk-host", SOLR_ZK,
             "--collection", "collection1",
-            "--log4j", new File(Resources.getResource("log4j-base.properties").toURI()).toString(),
+                "--log4j", new File(Resources.getResource("log4j.properties").toURI()).toString(),
             "--go-live-threads", "999",
             "--go-live");
         

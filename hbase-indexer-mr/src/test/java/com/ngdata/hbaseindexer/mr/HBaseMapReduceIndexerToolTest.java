@@ -15,11 +15,8 @@
  */
 package com.ngdata.hbaseindexer.mr;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Map.Entry;
-
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Resources;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -34,8 +31,10 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Resources;
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Map.Entry;
 
 public class HBaseMapReduceIndexerToolTest {
 
@@ -178,7 +177,7 @@ public class HBaseMapReduceIndexerToolTest {
             "--overwrite-output-dir",
             "--hbase-table-name", "record",
             "--verbose",
-            "--log4j", new File(Resources.getResource("log4j-base.properties").toURI()).toString()
+                "--log4j", new File(Resources.getResource("log4j.properties").toURI()).toString()
             );
         
 	verifyMorphlines();

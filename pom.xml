@@ -21,7 +21,7 @@
   <parent>
     <groupId>com.cloudera.cdh</groupId>
     <artifactId>cdh-root</artifactId>
-    <version>5.5.4-SNAPSHOT</version>
+    <version>5.5.4</version>
   </parent>
 
   <properties>
@@ -58,7 +58,7 @@
   <groupId>com.ngdata</groupId>
   <artifactId>hbase-indexer</artifactId>
   <packaging>pom</packaging>
-  <version>1.5-cdh5.5.4-SNAPSHOT</version>
+  <version>1.5-cdh5.5.4</version>
   <name>HBase Indexer</name>
 
   <url>http://www.ngdata.com/</url>
@@ -636,7 +636,7 @@
           <dependency>
             <groupId>com.ngdata</groupId>
             <artifactId>hbase-sep-impl</artifactId>
-            <version>1.5-hbase0.98-cdh5.5.4-SNAPSHOT</version>
+            <version>1.5-hbase0.98-cdh5.5.4</version>
           </dependency>
 
          <dependency>
@@ -804,7 +804,7 @@
           <dependency>
             <groupId>com.ngdata</groupId>
             <artifactId>hbase-sep-impl</artifactId>
-            <version>1.5-hbase1.0-cdh5.5.4-SNAPSHOT</version>
+            <version>1.5-hbase1.0-cdh5.5.4</version>
           </dependency>
 
          <dependency>

@@ -15,7 +15,6 @@
  */
 package com.ngdata.hbaseindexer.indexer;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
@@ -691,7 +690,7 @@ public class IndexerIT {
 
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
-        Put put = new Put("row1".getBytes(Charsets.US_ASCII));
+        Put put = new Put(b("row1"));
         put.add(b("family1"), b("field1"), b("value1"));
         table.put(put);
 
@@ -972,7 +971,7 @@ public class IndexerIT {
 
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
-        byte[] rowkey = new byte[]{0, 0, 0, 0};
+        byte[] rowkey = b("row1");
 
         // First do a row update whereby we only set irrelevant fields (fields that do not need to be indexed)
         Put put = new Put(rowkey);
@@ -998,7 +997,7 @@ public class IndexerIT {
 
         QueryResponse response = collection1.query(new SolrQuery("*:*"));
         SolrDocument doc = response.getResults().get(0);
-        assertEquals("#0;#0;#0;#0;", doc.getFirstValue("id").toString());
+        assertEquals("row1", doc.getFirstValue("id").toString());
 
         table.close();
     }
@@ -1071,7 +1070,7 @@ public class IndexerIT {
 
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
-        byte[] rowkey = new byte[]{0, 0, 0, 0};
+        byte[] rowkey = b("row1");
 
         List<Put> puts = Lists.newArrayList();
         Put put = new Put(rowkey);
@@ -1095,7 +1094,7 @@ public class IndexerIT {
         });
         QueryResponse response = collection1.query(new SolrQuery("*:*"));
         SolrDocument doc = response.getResults().get(0);
-        assertEquals("#0;#0;#0;#0;", doc.getFirstValue("id").toString());
+        assertEquals("row1", doc.getFirstValue("id").toString());
 
         table.close();
     }

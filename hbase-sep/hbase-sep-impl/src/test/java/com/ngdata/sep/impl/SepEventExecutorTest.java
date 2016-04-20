@@ -15,11 +15,13 @@
  */
 package com.ngdata.sep.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import com.google.common.collect.Lists;
+import com.ngdata.sep.EventListener;
+import com.ngdata.sep.SepEvent;
+import com.ngdata.sep.util.concurrent.WaitPolicy;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -28,13 +30,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.Lists;
-import com.ngdata.sep.EventListener;
-import com.ngdata.sep.SepEvent;
-import com.ngdata.sep.util.concurrent.WaitPolicy;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class SepEventExecutorTest {
 
@@ -79,11 +79,11 @@ public class SepEventExecutorTest {
             executor.scheduleSepEvent(createSepEvent(i));
         }
 
-        for (int retry = 0; retry < 10; retry++) {
+        for (int retry = 0; retry < 50; retry++) {
             if (eventListener.receivedEvents.size() >= NUM_EVENTS) {
                 break;
             }
-            Thread.sleep(10);
+            Thread.sleep(250);
         }
 
         assertEquals(NUM_EVENTS, eventListener.receivedEvents.size());
@@ -105,11 +105,11 @@ public class SepEventExecutorTest {
         List<Future<?>> futures = executor.flush();
         assertFalse(futures.isEmpty());
 
-        for (int retry = 0; retry < 10; retry++) {
+        for (int retry = 0; retry < 50; retry++) {
             if (eventListener.receivedEvents.size() >= NUM_EVENTS) {
                 break;
             }
-            Thread.sleep(10);
+            Thread.sleep(250);
         }
 
         assertEquals(NUM_EVENTS, eventListener.receivedEvents.size());
@@ -131,11 +131,11 @@ public class SepEventExecutorTest {
 
         Thread.sleep(500);
 
-        for (int retry = 0; retry < 10; retry++) {
+        for (int retry = 0; retry < 50; retry++) {
             if (eventListener.receivedEvents.size() >= NUM_EVENTS) {
                 break;
             }
-            Thread.sleep(10);
+            Thread.sleep(250);
         }
 
         assertEquals(NUM_EVENTS, eventListener.receivedEvents.size());
@@ -161,7 +161,7 @@ public class SepEventExecutorTest {
         public void processEvents(List<SepEvent> events) {
             for (SepEvent event : events) {
                 try {
-                    Thread.sleep(10);
+                    Thread.sleep(250);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new RuntimeException(e);

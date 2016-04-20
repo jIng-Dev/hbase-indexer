@@ -15,6 +15,7 @@
  */
 package com.ngdata.hbaseindexer.indexer;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
@@ -690,7 +691,7 @@ public class IndexerIT {
 
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
-        Put put = new Put(new byte[]{0, 0, 0, 0});
+        Put put = new Put("row1".getBytes(Charsets.US_ASCII));
         put.add(b("family1"), b("field1"), b("value1"));
         table.put(put);
 
@@ -706,7 +707,7 @@ public class IndexerIT {
 
         QueryResponse response = collection1.query(new SolrQuery("*:*"));
         SolrDocument doc = response.getResults().get(0);
-        assertEquals("#0;#0;#0;#0;", doc.getFirstValue("id").toString());
+        assertEquals("row1", doc.getFirstValue("id").toString());
 
         table.close();
     }

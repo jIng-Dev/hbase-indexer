@@ -1181,6 +1181,18 @@
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <configuration>
+            <!-- Disable java8 doclint -->
+            <additionalparam>-Xdoclint:none</additionalparam>
+            <!-- Disable javadoc generation by default. We only want javadocs for public api jars
+                 to be published, otherwise customers have access to the javadoc of implementation
+                 classes, which clashes with the idea that the implementation should be obfuscated. -->
+            <skip>true</skip>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
           <version>2.1.2</version>
           <executions>

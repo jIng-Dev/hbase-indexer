@@ -39,11 +39,6 @@
     <version.hadoop.hbase98>${cdh.hadoop.version}</version.hadoop.hbase98>
     <version.hadoop.hbase10>${cdh.hadoop.version}</version.hadoop.hbase10>
     <version.hadoop.hbase12>${cdh.hadoop.version}</version.hadoop.hbase12>
-    <version.hadoop.mr1>${cdh.mr1.version}</version.hadoop.mr1>
-    <version.hadoop.mr1.hbase95>${cdh.mr1.version}</version.hadoop.mr1.hbase95>
-    <version.hadoop.mr1.hbase98>${cdh.mr1.version}</version.hadoop.mr1.hbase98>
-    <version.hadoop.mr1.hbase10>${cdh.mr1.version}</version.hadoop.mr1.hbase10>
-    <version.hadoop.mr1.hbase12>${cdh.mr1.version}</version.hadoop.mr1.hbase12>
     <version.hadoop>${cdh.hadoop.version}</version.hadoop>
     <version.zookeeper>${cdh.zookeeper.version}</version.zookeeper>
     <version.jackson>${cdh.jackson.version}</version.jackson>
@@ -54,6 +49,8 @@
     <version.search.hbase10>${cdh.search.version}</version.search.hbase10>
     <version.search.hbase12>${cdh.search.version}</version.search.hbase12>
     <version.jersey>1.18.3</version.jersey>
+
+    <hadoop.version>${cdh.hadoop.version}</hadoop.version>
 
     <!-- Tells maven plugins what file encoding to use -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -487,12 +484,6 @@
           <!-- We have to explicitly manage Hadoop dependencies here, since they are optional in HBase -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-test</artifactId>
-            <version>${version.hadoop.mr1}</version>
-            <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${version.hadoop}</version>
           </dependency>
@@ -514,11 +505,6 @@
             <version>${version.hadoop}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <version>${version.hadoop.mr1}</version>
           </dependency>
           <dependency>
             <groupId>org.kohsuke</groupId>
@@ -563,12 +549,6 @@
           <!-- We have to explicitly manage Hadoop dependencies here, since they are optional in HBase -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-test</artifactId>
-            <version>${version.hadoop.mr1.hbase95}</version>
-            <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${version.hadoop.hbase95}</version>
           </dependency>
@@ -596,11 +576,6 @@
             <artifactId>hadoop-minicluster</artifactId>
             <version>${version.hadoop.hbase95}</version>
             <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <version>${version.hadoop.mr1.hbase95}</version>
           </dependency>
         </dependencies>
       </dependencyManagement>
@@ -653,12 +628,6 @@
           <!-- We have to explicitly manage Hadoop dependencies here, since they are optional in HBase -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-test</artifactId>
-            <version>${version.hadoop.mr1.hbase98}</version>
-            <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${version.hadoop.hbase98}</version>
           </dependency>
@@ -686,11 +655,6 @@
             <artifactId>hadoop-minicluster</artifactId>
             <version>${version.hadoop.hbase98}</version>
             <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <version>${version.hadoop.mr1.hbase98}</version>
           </dependency>
           <dependency>
             <groupId>org.kohsuke</groupId>
@@ -820,12 +784,6 @@
           <!-- We have to explicitly manage Hadoop dependencies here, since they are optional in HBase -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-test</artifactId>
-            <version>${version.hadoop.mr1.hbase10}</version>
-            <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${version.hadoop.hbase10}</version>
           </dependency>
@@ -853,11 +811,6 @@
             <artifactId>hadoop-minicluster</artifactId>
             <version>${version.hadoop.hbase10}</version>
             <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <version>${version.hadoop.mr1.hbase10}</version>
           </dependency>
           <dependency>
             <groupId>org.kohsuke</groupId>
@@ -988,12 +941,6 @@
           <!-- We have to explicitly manage Hadoop dependencies here, since they are optional in HBase -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-test</artifactId>
-            <version>${version.hadoop.mr1.hbase12}</version>
-            <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${version.hadoop.hbase12}</version>
           </dependency>
@@ -1021,11 +968,6 @@
             <artifactId>hadoop-minicluster</artifactId>
             <version>${version.hadoop.hbase12}</version>
             <scope>test</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <version>${version.hadoop.mr1.hbase12}</version>
           </dependency>
           <dependency>
             <groupId>org.kohsuke</groupId>

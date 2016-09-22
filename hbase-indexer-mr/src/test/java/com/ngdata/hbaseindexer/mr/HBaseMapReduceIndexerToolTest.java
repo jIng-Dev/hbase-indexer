@@ -157,18 +157,40 @@ public class HBaseMapReduceIndexerToolTest {
             "--fanout", "2",
             "--morphline-file", new File(Resources.getResource("extractHBaseCellWithoutZk.conf").toURI()).toString(),
             "--overwrite-output-dir",
+            "--verbose",
+            "--log4j", new File(Resources.getResource("log4j-base.properties").toURI()).toString()
+            );
+
+	verifyMorphlines();
+    }
+
+    @Test
+    public void testIndexer_Morphlines_tableoverride() throws Exception {
+        FileSystem fs = FileSystem.get(HBASE_TEST_UTILITY.getConfiguration());
+        MR_TEST_UTIL.runTool(
+            "--hbase-indexer-file", new File(Resources.getResource("morphline_indexer_without_zk_no_table.xml").toURI()).toString(),
+            "--solr-home-dir", MINIMR_CONF_DIR.toString(),
+            "--output-dir", fs.makeQualified(new Path("/solroutput")).toString(),
+            "--shards", "2",
+            "--reducers", "8",
+            "--fanout", "2",
+            "--morphline-file", new File(Resources.getResource("extractHBaseCellWithoutZk.conf").toURI()).toString(),
+            "--overwrite-output-dir",
             "--hbase-table-name", "record",
             "--verbose",
             "--log4j", new File(Resources.getResource("log4j-base.properties").toURI()).toString()
             );
         
+	verifyMorphlines();
+    }
+
+    private void verifyMorphlines() throws Exception {
         ForkedTestUtils.validateSolrServerDocumentCount(
                 MINIMR_CONF_DIR,
                 FileSystem.get(HBASE_TEST_UTILITY.getConfiguration()),
                 new Path("/solroutput", "results"),
                 RECORD_COUNT,
                 2);
-            
     }
     
     @Test

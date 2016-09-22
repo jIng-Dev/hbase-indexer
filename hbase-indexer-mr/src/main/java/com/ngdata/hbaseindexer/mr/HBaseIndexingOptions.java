@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.ngdata.hbaseindexer.ConfKeys;
+import com.ngdata.hbaseindexer.HBaseIndexerConfiguration;
 import com.ngdata.hbaseindexer.conf.DefaultIndexerComponentFactory;
 import com.ngdata.hbaseindexer.conf.IndexerComponentFactory;
 import com.ngdata.hbaseindexer.conf.IndexerComponentFactoryUtil;
@@ -382,7 +383,8 @@ class HBaseIndexingOptions extends OptionsBridge {
 
             StateWatchingZooKeeper zk = null;
             try {
-                zk = new StateWatchingZooKeeper(hbaseIndexerZkHost, 30000, new DefaultACLProvider());
+                int zkSessionTimeout = HBaseIndexerConfiguration.getSessionTimeout(conf);
+                zk = new StateWatchingZooKeeper(hbaseIndexerZkHost, zkSessionTimeout, new DefaultACLProvider());
                 IndexerModelImpl indexerModel = new IndexerModelImpl(zk, conf.get(ConfKeys.ZK_ROOT_NODE, "/ngdata/hbaseindexer"));
                 IndexerDefinition indexerDefinition = indexerModel.getIndexer(hbaseIndexerName);
                 hbaseIndexerComponentFactory = indexerDefinition.getIndexerComponentFactory();

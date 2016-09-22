@@ -44,6 +44,10 @@ public class HBaseIndexerConfiguration {
         checkDefaultsVersion(conf);
         return conf;
     }
+    
+    public static int getSessionTimeout(Configuration conf) {
+      return conf.getInt(ConfKeys.ZK_SESSION_TIMEOUT, 30000);
+    }
 
     private static void checkDefaultsVersion(Configuration conf) {
         if (conf.getBoolean("hbaseindexer.defaults.for.version.skip", Boolean.FALSE)) return;

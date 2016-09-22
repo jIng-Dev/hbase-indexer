@@ -141,7 +141,7 @@ public class Main {
 
         sepModel = new SepModelImpl(zk, conf);
 
-        indexerMaster = new IndexerMaster(zk, indexerModel, null, conf, zkConnectString,
+        indexerMaster = new IndexerMaster(zk, indexerModel, conf, conf, zkConnectString,
                 sepModel);
         indexerMaster.start();
 
@@ -151,11 +151,11 @@ public class Main {
                 indexerProcessRegistry, tablePool, conf);
 
         indexerSupervisor.init();
-        startHttpServer(conf, hostname);
+        startHttpServer();
 
     }
 
-    private void startHttpServer(Configuration conf, String hostname) throws Exception {
+    private void startHttpServer() throws Exception {
         server = new Server();
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
 

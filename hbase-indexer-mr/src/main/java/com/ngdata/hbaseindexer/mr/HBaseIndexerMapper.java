@@ -60,6 +60,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.ngdata.hbaseindexer.HBaseIndexerConfiguration;
 import com.ngdata.hbaseindexer.SolrConnectionParams;
 import com.ngdata.hbaseindexer.conf.IndexerConf;
 import com.ngdata.hbaseindexer.conf.IndexerConf.RowReadMode;
@@ -286,6 +287,9 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
         }
         Preconditions.checkNotNull(uniqueKeyField);
         CloudSolrServer solrServer = new CloudSolrServer(indexZkHost);
+        int zkSessionTimeout = HBaseIndexerConfiguration.getSessionTimeout(context.getConfiguration());
+        solrServer.setZkClientTimeout(zkSessionTimeout);
+        solrServer.setZkConnectTimeout(zkSessionTimeout);      
         solrServer.setDefaultCollection(collectionName);
         solrServer.setIdField(uniqueKeyField);
 

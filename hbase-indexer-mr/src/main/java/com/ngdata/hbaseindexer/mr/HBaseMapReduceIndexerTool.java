@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
+import com.ngdata.hbaseindexer.HBaseIndexerConfiguration;
 import com.ngdata.hbaseindexer.SolrConnectionParams;
 import com.ngdata.hbaseindexer.conf.IndexerComponentFactory;
 import com.ngdata.hbaseindexer.conf.IndexerComponentFactoryUtil;
@@ -133,6 +133,7 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
             conf.set("mapred.fairscheduler.pool", hbaseIndexingOpts.fairSchedulerPool);
         }
 
+        // switch off a false warning about allegedly not implementing Tool
         // also see http://hadoop.6.n7.nabble.com/GenericOptionsParser-warning-td8103.html
         // also see https://issues.apache.org/jira/browse/HADOOP-8183
         getConf().setBoolean("mapred.used.genericoptionsparser", true);
@@ -171,6 +172,9 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
             String uniqueKeyField = indexerConf.getUniqueKeyField();
             Preconditions.checkNotNull(uniqueKeyField);
             CloudSolrServer solrServer = new CloudSolrServer(hbaseIndexingOpts.zkHost);
+            int zkSessionTimeout = HBaseIndexerConfiguration.getSessionTimeout(conf);
+            solrServer.setZkClientTimeout(zkSessionTimeout);
+            solrServer.setZkConnectTimeout(zkSessionTimeout);      
             solrServer.setDefaultCollection(hbaseIndexingOpts.collection);
             solrServer.setIdField(uniqueKeyField);
 
@@ -252,6 +256,9 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
             String indexZkHost = indexConnectionParams.get(SolrConnectionParams.ZOOKEEPER);
             String collectionName = indexConnectionParams.get(SolrConnectionParams.COLLECTION);
             CloudSolrServer solrServer = new CloudSolrServer(indexZkHost);
+            int zkSessionTimeout = HBaseIndexerConfiguration.getSessionTimeout(getConf());
+            solrServer.setZkClientTimeout(zkSessionTimeout);
+            solrServer.setZkConnectTimeout(zkSessionTimeout);      
             solrServer.setDefaultCollection(collectionName);
             solrServer.setIdField(uniqueKeyField);
             return Collections.singleton((SolrServer) solrServer);

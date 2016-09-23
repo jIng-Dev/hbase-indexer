@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.CloudSolrServer;
+import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
@@ -68,7 +68,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
     private static final String RESOURCES_DIR = "target/test-classes";
     private static final File MINIMR_CONF_DIR = new File(RESOURCES_DIR + "/solr/minimr");
     
-    private static CloudSolrServer COLLECTION1;
+    private static CloudSolrClient COLLECTION1;
     private static HBaseAdmin HBASE_ADMIN;
     private static HTable RECORD_TABLE;
     private static String SOLR_ZK;
@@ -99,7 +99,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
         SOLR_TEST_UTILITY.createCollection("collection1", "config1", 2);
         SOLR_TEST_UTILITY.createCollection("collection2", "config1", 2);
 
-        COLLECTION1 = new CloudSolrServer(SOLR_TEST_UTILITY.getZkConnectString());
+        COLLECTION1 = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());
         COLLECTION1.setDefaultCollection("collection1");
 
         SOLR_ZK = "127.0.0.1:" + zkClientPort + "/solr";
@@ -193,14 +193,14 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
      * @param queryString Solr query string
      * @return list of results from Solr
      */
-    private SolrDocumentList executeSolrQuery(String queryString) throws SolrServerException {
+    private SolrDocumentList executeSolrQuery(String queryString) throws SolrServerException, IOException {
         return executeSolrQuery(COLLECTION1, queryString);
     }
     
     /**
      * Execute a Solr query on a specific collection.
      */
-    private SolrDocumentList executeSolrQuery(CloudSolrServer collection, String queryString) throws SolrServerException {
+    private SolrDocumentList executeSolrQuery(CloudSolrClient collection, String queryString) throws SolrServerException, IOException {
         SolrQuery query = new SolrQuery(queryString).setRows(RECORD_COUNT * 2).addSort("id", ORDER.asc);
         QueryResponse response = collection.query(query);
         return response.getResults();

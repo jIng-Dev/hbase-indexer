@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.impl.CloudSolrServer;
+import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
@@ -79,8 +79,8 @@ public class IndexerIT {
     private static Configuration conf;
     private static HBaseTestingUtility hbaseTestUtil;
     private static SolrTestingUtility solrTestingUtility;
-    private static CloudSolrServer collection1;
-    private static CloudSolrServer collection2;
+    private static CloudSolrClient collection1;
+    private static CloudSolrClient collection2;
 
     private Main main;
     private int oldMasterEventCount;
@@ -120,10 +120,10 @@ public class IndexerIT {
         solrTestingUtility.createCore("collection1_core1", "collection1", "config1", 1);
         solrTestingUtility.createCore("collection2_core1", "collection2", "config1", 1);
 
-        collection1 = new CloudSolrServer(solrTestingUtility.getZkConnectString());
+        collection1 = new CloudSolrClient(solrTestingUtility.getZkConnectString());
         collection1.setDefaultCollection("collection1");
 
-        collection2 = new CloudSolrServer(solrTestingUtility.getZkConnectString());
+        collection2 = new CloudSolrClient(solrTestingUtility.getZkConnectString());
         collection2.setDefaultCollection("collection2");
     }
 

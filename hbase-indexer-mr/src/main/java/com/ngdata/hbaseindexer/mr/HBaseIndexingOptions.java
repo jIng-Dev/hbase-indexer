@@ -43,10 +43,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
-import org.apache.solr.hadoop.ForkedMapReduceIndexerTool.OptionsBridge;
-import org.apache.solr.hadoop.ForkedZooKeeperInspector;
 import org.apache.solr.hadoop.MapReduceIndexerTool;
-import org.apache.solr.hadoop.MorphlineClasspathUtil;
+import org.apache.solr.hadoop.PublicZooKeeperInspector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +61,7 @@ import java.util.UUID;
  * Container for commandline options passed in for HBase Indexer, as well as a bridge to existing MapReduce index
  * building functionality.
  */
-class HBaseIndexingOptions extends OptionsBridge {
+class HBaseIndexingOptions {
 
     private static final Logger LOG = LoggerFactory.getLogger(MapReduceIndexerTool.class);
 
@@ -77,18 +75,39 @@ class HBaseIndexingOptions extends OptionsBridge {
     // Flag that we have created our own output directory
     private boolean generatedOutputDir = false;
 
-    public String hbaseIndexerZkHost;
-    public String hbaseIndexerName = DEFAULT_INDEXER_NAME;
-    public String hbaseIndexerComponentFactory;
-    public File hbaseIndexerConfigFile;
-    public String hbaseTableName;
-    public String hbaseStartRow;
-    public String hbaseEndRow;
-    public String hbaseStartTimeString;
-    public String hbaseEndTimeString;
-    public String hbaseTimestampFormat;
-    public boolean overwriteOutputDir;
-    public boolean clearIndex;
+    // Taken from MapReduceIndexerTool
+    boolean goLive;
+    String collection;
+    String zkHost;
+    Integer goLiveThreads;
+    List<List<String>> shardUrls;
+    Path outputDir;
+    int reducers;
+    String updateConflictResolver;
+    int fanout;
+    Integer shards;
+    int maxSegments;
+    File morphlineFile;
+    String morphlineId;
+    File solrHomeDir;
+    String fairSchedulerPool;
+    boolean isDryRun;
+    File log4jConfigFile;
+    boolean isVerbose;
+
+    // HBaseMapReduceIndexerTool specifics
+    String hbaseIndexerZkHost;
+    String hbaseIndexerName = DEFAULT_INDEXER_NAME;
+    String hbaseIndexerComponentFactory;
+    File hbaseIndexerConfigFile;
+    String hbaseTableName;
+    String hbaseStartRow;
+    String hbaseEndRow;
+    String hbaseStartTimeString;
+    String hbaseEndTimeString;
+    String hbaseTimestampFormat;
+    boolean overwriteOutputDir;
+    boolean clearIndex;
 
     public HBaseIndexingOptions(Configuration conf) {
         Preconditions.checkNotNull(conf);
@@ -295,9 +314,8 @@ class HBaseIndexingOptions extends OptionsBridge {
     private void evaluateShards() {
         if (zkHost != null) {
             assert collection != null;
-            ForkedZooKeeperInspector zki = new ForkedZooKeeperInspector();
             try {
-                shardUrls = zki.extractShardUrls(zkHost, collection);
+                shardUrls = PublicZooKeeperInspector.extractShardUrls(zkHost, collection);
             } catch (Exception e) {
                 LOG.debug("Cannot extract SolrCloud shard URLs from ZooKeeper", e);
                 throw new RuntimeException("Cannot extract SolrCloud shard URLs from ZooKeeper", e);

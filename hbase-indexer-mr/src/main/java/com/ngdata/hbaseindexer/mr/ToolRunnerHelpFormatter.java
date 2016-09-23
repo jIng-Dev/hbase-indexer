@@ -14,7 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.solr.hadoop;
+package com.ngdata.hbaseindexer.mr;
+
+import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.helper.ASCIITextWidthCounter;
+import net.sourceforge.argparse4j.helper.TextHelper;
+import org.apache.hadoop.util.ToolRunner;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -25,18 +30,12 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 
-import net.sourceforge.argparse4j.ArgumentParsers;
-import net.sourceforge.argparse4j.helper.ASCIITextWidthCounter;
-import net.sourceforge.argparse4j.helper.TextHelper;
-
-import org.apache.hadoop.util.ToolRunner;
-
 /**
  * Nicely formats the output of
  * {@link ToolRunner#printGenericCommandUsage(PrintStream) with the same look and feel that argparse4j uses for help text.
  */
-public class ForkedToolRunnerHelpFormatter {
-
+class ToolRunnerHelpFormatter {
+  
   public static String getGenericCommandUsage() {
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     String msg;
@@ -46,8 +45,8 @@ public class ForkedToolRunnerHelpFormatter {
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException(e); // unreachable
     }
-
-    BufferedReader reader = new BufferedReader(new StringReader(msg));
+    
+    BufferedReader reader = new BufferedReader(new StringReader(msg));    
     StringBuilder result = new StringBuilder();
     while (true) {
       String line;
@@ -56,11 +55,11 @@ public class ForkedToolRunnerHelpFormatter {
       } catch (IOException e) {
         throw new RuntimeException(e); // unreachable
       }
-
+      
       if (line == null) {
         return result.toString(); // EOS
       }
-
+      
       if (!line.startsWith("-")) {
         result.append(line + "\n");
       } else {
@@ -70,18 +69,18 @@ public class ForkedToolRunnerHelpFormatter {
           i = line.indexOf('\t');
         }
         if (i < 0) {
-          result.append(line + "\n");
+          result.append(line + "\n");          
         } else {
           String title = line.substring(0, i).trim();
           if (title.length() >= 3 && Character.isLetterOrDigit(title.charAt(1)) && Character.isLetterOrDigit(title.charAt(2))) {
-            title = "-" + title; // prefer "--libjars" long arg style over "-libjars" style but retain "-D foo" short arg style
+            title = "-" + title; // prefer "--libjars" long arg style over "-libjars" style but retain "-D foo" short arg style        
           }
           String help = line.substring(i, line.length()).trim();
-          StringWriter strWriter = new StringWriter();
+          StringWriter strWriter = new StringWriter(); 
           PrintWriter writer = new PrintWriter(strWriter, true);
           TextHelper.printHelp(writer, title, help, new ASCIITextWidthCounter(), ArgumentParsers.getFormatWidth());
-          result.append(strWriter.toString());
-        }
+          result.append(strWriter.toString());          
+        }        
       }
     }
   }

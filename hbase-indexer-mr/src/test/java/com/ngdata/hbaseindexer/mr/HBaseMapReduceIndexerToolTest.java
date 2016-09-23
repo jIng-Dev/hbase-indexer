@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.solr.hadoop.ForkedTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -114,7 +113,7 @@ public class HBaseMapReduceIndexerToolTest {
             "--shards", "1",
             "--overwrite-output-dir");
         
-        ForkedTestUtils.validateSolrServerDocumentCount(
+        TestUtils.validateSolrServerDocumentCount(
                 MINIMR_CONF_DIR,
                 FileSystem.get(HBASE_TEST_UTILITY.getConfiguration()),
                 new Path("/solroutput", "results"),
@@ -133,8 +132,8 @@ public class HBaseMapReduceIndexerToolTest {
             "--output-dir", fs.makeQualified(new Path("/solroutput")).toString(),
             "--shards", "3",
             "--overwrite-output-dir");
-        
-        ForkedTestUtils.validateSolrServerDocumentCount(
+
+        TestUtils.validateSolrServerDocumentCount(
                 MINIMR_CONF_DIR,
                 FileSystem.get(HBASE_TEST_UTILITY.getConfiguration()),
                 new Path("/solroutput", "results"),
@@ -184,7 +183,7 @@ public class HBaseMapReduceIndexerToolTest {
     }
 
     private void verifyMorphlines() throws Exception {
-        ForkedTestUtils.validateSolrServerDocumentCount(
+        TestUtils.validateSolrServerDocumentCount(
                 MINIMR_CONF_DIR,
                 FileSystem.get(HBASE_TEST_UTILITY.getConfiguration()),
                 new Path("/solroutput", "results"),
@@ -205,8 +204,8 @@ public class HBaseMapReduceIndexerToolTest {
             "--hbase-end-row", "row1000",
             "--max-segments", "2",
             "--overwrite-output-dir");
-        
-        ForkedTestUtils.validateSolrServerDocumentCount(
+
+        TestUtils.validateSolrServerDocumentCount(
                 MINIMR_CONF_DIR,
                 FileSystem.get(HBASE_TEST_UTILITY.getConfiguration()),
                 new Path("/solroutput", "results"),

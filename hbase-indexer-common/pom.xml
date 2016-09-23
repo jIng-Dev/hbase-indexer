@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hbase-indexer-common</artifactId>
@@ -30,13 +31,17 @@
   </parent>
 
   <dependencies>
-   <dependency>
+    <dependency>
       <groupId>com.ngdata</groupId>
       <artifactId>hbase-sep-api</artifactId>
     </dependency>
     <dependency>
       <groupId>com.ngdata</groupId>
       <artifactId>hbase-sep-impl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.yammer.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -51,14 +56,12 @@
       <artifactId>jul-to-slf4j</artifactId>
     </dependency>
     <dependency>
-        <groupId>org.apache.solr</groupId>
-        <artifactId>solr-core</artifactId>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.solr</groupId>
-      <artifactId>solr</artifactId>
-      <version>${version.solr}</version>
-      <type>war</type>
+      <artifactId>solr-test-framework</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
@@ -104,7 +107,7 @@
             <phase>generate-sources</phase>
             <configuration>
               <target>
-                <property name="generated.sources" location="${project.build.directory}/generated-sources" />
+                <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
 
                 <exec executable="sh">
                   <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java ${project.basedir}/.." />
@@ -125,7 +128,7 @@
             </goals>
             <configuration>
               <tasks>
-                <mkdir dir="${basedir}/target/classes/com/ngdata/hbaseindexer/util/solr/" />
+                <mkdir dir="${basedir}/target/classes/com/ngdata/hbaseindexer/util/solr/"/>
                 <echo file="${basedir}/target/classes/com/ngdata/hbaseindexer/util/solr/solr.properties" encoding="utf8">
                   solr.version=${version.solr}
                 </echo>

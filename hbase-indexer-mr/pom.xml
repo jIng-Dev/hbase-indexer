@@ -357,7 +357,7 @@
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
           <systemPropertyVariables>
-            <log4j.configuration>file:${project.build.testOutputDirectory}/${log4j.properties.file}</log4j.configuration>
+            <log4j.configuration>file:${project.build.testOutputDirectory}/log4j.properties</log4j.configuration>
           </systemPropertyVariables>
         </configuration>
       </plugin>

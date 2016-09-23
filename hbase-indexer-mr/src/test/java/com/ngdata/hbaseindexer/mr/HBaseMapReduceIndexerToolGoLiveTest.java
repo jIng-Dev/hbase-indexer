@@ -102,7 +102,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
         SOLR_TEST_UTILITY.createCollection("collection1", "config1", 2);
         SOLR_TEST_UTILITY.createCollection("collection2", "config1", 2);
 
-        COLLECTION1 = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();        
+        COLLECTION1 = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());        
         COLLECTION1.setDefaultCollection("collection1");
 
         SOLR_ZK = "127.0.0.1:" + zkClientPort + "/solr";

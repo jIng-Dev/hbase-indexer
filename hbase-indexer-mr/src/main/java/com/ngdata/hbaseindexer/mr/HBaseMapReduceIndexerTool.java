@@ -294,7 +294,7 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
         if (solrMode.equals("cloud")) {
             String indexZkHost = indexConnectionParams.get(SolrConnectionParams.ZOOKEEPER);
             String collectionName = indexConnectionParams.get(SolrConnectionParams.COLLECTION);
-            CloudSolrClient solrServer = new CloudSolrClient.Builder().withZkHost(indexZkHost).build();
+            CloudSolrClient solrServer = new CloudSolrClient(indexZkHost);
             int zkSessionTimeout = HBaseIndexerConfiguration.getSessionTimeout(getConf());
             solrServer.setZkClientTimeout(zkSessionTimeout);
             solrServer.setZkConnectTimeout(zkSessionTimeout);

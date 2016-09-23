@@ -76,7 +76,7 @@ public class IndexerDryRunTest {
                 Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "solrconfig.xml")));
         SOLR_TEST_UTILITY.createCore("collection1_core11", "collection1", "config1", 1);
 
-        COLLECTION = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();
+        COLLECTION = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());
         COLLECTION.setDefaultCollection("collection1");
         
         HBASE_ADMIN = ConnectionFactory.createConnection(HBASE_TEST_UTILITY.getConfiguration()).getAdmin();

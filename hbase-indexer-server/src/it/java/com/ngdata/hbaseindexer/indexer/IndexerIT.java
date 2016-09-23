@@ -127,10 +127,10 @@ public class IndexerIT {
         solrTestingUtility.createCore("collection1_core1", "collection1", "config1", 1);
         solrTestingUtility.createCore("collection2_core1", "collection2", "config1", 1);
 
-        collection1 = new CloudSolrClient.Builder().withZkHost(solrTestingUtility.getZkConnectString()).build();
+        collection1 = new CloudSolrClient(solrTestingUtility.getZkConnectString());
         collection1.setDefaultCollection("collection1");
 
-        collection2 = new CloudSolrClient.Builder().withZkHost(solrTestingUtility.getZkConnectString()).build();
+        collection2 = new CloudSolrClient(solrTestingUtility.getZkConnectString());
         collection2.setDefaultCollection("collection2");
         
         connection = ConnectionFactory.createConnection(conf);

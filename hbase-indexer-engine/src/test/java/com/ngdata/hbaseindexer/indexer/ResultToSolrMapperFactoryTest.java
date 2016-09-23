@@ -54,7 +54,7 @@ public class ResultToSolrMapperFactoryTest {
                 Resources.toByteArray(Resources.getResource(ResultToSolrMapperFactoryTest.class, "solrconfig.xml")));
         SOLR_TEST_UTILITY.createCore("collection1_core1", "collection1", "config1", 1);
 
-        COLLECTION1 = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();
+        COLLECTION1 = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());
         COLLECTION1.setDefaultCollection("collection1");
     }
 

@@ -15,19 +15,105 @@
  */
 package com.ngdata.sep.impl;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 
 /**
  * Some utility methods that can be useful when writing test cases that involve the SEP.
  *
- * This class is specifc to HBase 0.95 implementation.
+ * <p>These methods assume HBase is running within the current JVM, so you will use this typically
+ * together with HBase's {@code HBaseTestingUtility}.</p>
+ *
+ * <p>Since starting and stopping of the ReplicationSource threads is asynchronous
+ * (with respect to the calls on ReplicationAdmin / SepModel), there are utility methods
+ * to help waiting on that: {@link #waitOnReplicationPeerReady(String)} and
+ * {@link #waitOnAllReplicationPeersStopped()}.</p>
  */
-public class SepTestUtil extends SepTestUtilCommon {
-    private static final String MBEAN_NAME = "Hadoop:service=HBase,name=RegionServer,sub=Replication";
-    private static final String ATTR_NAME = "source.sizeOfLogQueue";
+public class SepTestUtil {
+    /**
+     * After adding a new replication peer, this waits for the replication source in the region server to be started.
+     */
+    public static void waitOnReplicationPeerReady(String peerId) {
+        long tryUntil = System.currentTimeMillis() + 60000L;
+        boolean waited = false;
+        while (!threadExists(".replicationSource," + peerId)) {
+            waited = true;
+            if (System.currentTimeMillis() > tryUntil) {
+                throw new RuntimeException("Replication thread for peer " + peerId + " didn't start within timeout.");
+            }
+            System.out.print("\nWaiting for replication source for " + peerId + " to be started...");
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                // I don't expect this
+                throw new RuntimeException(e);
+            }
+        }
 
-    public static void waitOnReplication(Configuration conf, long timeout) throws Exception {
-        SepTestUtilCommon.waitOnReplication(conf, timeout, TableName.META_TABLE_NAME.toString(), MBEAN_NAME, ATTR_NAME);
+        if (waited) {
+            System.out.println("done");
+        }
     }
+
+    /**
+     * Wait for a replication peer to be stopped.
+     */
+    public static void waitOnReplicationPeerStopped(String peerId) {
+        long tryUntil = System.currentTimeMillis() + 60000L;
+        boolean waited = false;
+        while (threadExists(".replicationSource," + peerId)) {
+            waited = true;
+            if (System.currentTimeMillis() > tryUntil) {
+                throw new RuntimeException("Replication thread for peer " + peerId + " didn't stop within timeout.");
+            }
+            System.out.print("\nWaiting for replication source for " + peerId + " to be stopped...");
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                // I don't expect this
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (waited) {
+            System.out.println("done");
+        }
+    }
+
+    public static void waitOnAllReplicationPeersStopped() {
+        long tryUntil = System.currentTimeMillis() + 60000L;
+        boolean waited = false;
+        while (threadExists(".replicationSource,")) {
+            waited = true;
+            if (System.currentTimeMillis() > tryUntil) {
+                throw new RuntimeException("Replication threads didn't stop within timeout.");
+            }
+            System.out.print("\nWaiting for replication sources to be stopped...");
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                // I don't expect this
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (waited) {
+            System.out.println("done");
+        }
+    }
+
+    private static boolean threadExists(String namepart) {
+        ThreadMXBean threadmx = ManagementFactory.getThreadMXBean();
+        ThreadInfo[] infos = threadmx.getThreadInfo(threadmx.getAllThreadIds());
+        for (ThreadInfo info : infos) {
+            if (info != null) { // see javadoc getThreadInfo (thread can have disappeared between the two calls)
+                if (info.getThreadName().contains(namepart)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 }

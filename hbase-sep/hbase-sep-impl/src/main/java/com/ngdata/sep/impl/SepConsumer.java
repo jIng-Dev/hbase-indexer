@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -225,7 +226,7 @@ public class SepConsumer extends BaseHRegionServer {
             for (final AdminProtos.WALEntry entry : entries) {
                 TableName tableName = (entry.getKey().getWriteTime() < subscriptionTimestamp) ? null :
                         TableName.valueOf(entry.getKey().getTableName().toByteArray());
-                Multimap<ByteBuffer, KeyValue> keyValuesPerRowKey = ArrayListMultimap.create();
+                Multimap<ByteBuffer, Cell> keyValuesPerRowKey = ArrayListMultimap.create();
                 final Map<ByteBuffer, byte[]> payloadPerRowKey = Maps.newHashMap();
                 int count = entry.getAssociatedCellCount();
                 for (int i = 0; i < count; i++) {
@@ -254,9 +255,9 @@ public class SepConsumer extends BaseHRegionServer {
                 }
 
                 for (final ByteBuffer rowKeyBuffer : keyValuesPerRowKey.keySet()) {
-                    final List<KeyValue> keyValues = (List<KeyValue>)keyValuesPerRowKey.get(rowKeyBuffer);
+                    final List<Cell> keyValues = (List<Cell>) keyValuesPerRowKey.get(rowKeyBuffer);
 
-                    final SepEvent sepEvent = new SepEvent(tableName.toBytes(), keyValues.get(0).getRow(), keyValues,
+                    final SepEvent sepEvent = new SepEvent(tableName.toBytes(), CellUtil.cloneRow(keyValues.get(0)), keyValues,
                             payloadPerRowKey.get(rowKeyBuffer));
                     eventExecutor.scheduleSepEvent(sepEvent);
                     lastProcessedTimestamp = Math.max(lastProcessedTimestamp, entry.getKey().getWriteTime());

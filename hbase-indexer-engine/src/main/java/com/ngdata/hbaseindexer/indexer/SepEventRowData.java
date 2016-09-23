@@ -18,6 +18,7 @@ package com.ngdata.hbaseindexer.indexer;
 import com.google.common.collect.Lists;
 import com.ngdata.sep.SepEvent;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
@@ -32,11 +33,11 @@ import java.util.List;
 public class SepEventRowData implements RowData {
 
     private final SepEvent sepEvent;
-
+    
     public SepEventRowData(SepEvent sepEvent) {
         this.sepEvent = sepEvent;
     }
-
+    
     @Override
     public byte[] getRow() {
         return sepEvent.getRow();
@@ -48,7 +49,7 @@ public class SepEventRowData implements RowData {
     }
 
     @Override
-    public List<KeyValue> getKeyValues() {
+    public List<Cell> getKeyValues() {
         return sepEvent.getKeyValues();
     }
 
@@ -60,9 +61,9 @@ public class SepEventRowData implements RowData {
     @Override
     public Result toResult() {
 
-        List<KeyValue> filteredKeyValues = Lists.newArrayListWithCapacity(sepEvent.getKeyValues().size());
+        List<Cell> filteredKeyValues = Lists.newArrayListWithCapacity(sepEvent.getKeyValues().size());
 
-        for (KeyValue kv : getKeyValues()) {
+        for (Cell kv : getKeyValues()) {
             if (!CellUtil.isDelete(kv) && !CellUtil.isDeleteFamily(kv)) {
                 filteredKeyValues.add(kv);
             }
@@ -70,7 +71,7 @@ public class SepEventRowData implements RowData {
 
         // A Result object requires that the KeyValues are sorted (e.g., it does binary search on them)
         Collections.sort(filteredKeyValues, KeyValue.COMPARATOR);
-        return new Result(filteredKeyValues);
+        return Result.create(filteredKeyValues);
     }
 
 }

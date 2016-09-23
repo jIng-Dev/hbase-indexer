@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 
@@ -76,7 +77,7 @@ public class SepModelImpl implements SepModel {
         ReplicationAdmin replicationAdmin = new ReplicationAdmin(hbaseConf);
         try {
             String internalName = toInternalSubscriptionName(name);
-            if (replicationAdmin.listPeers().containsKey(internalName)) {
+            if (replicationAdmin.listPeerConfigs().containsKey(internalName)) {
                 return false;
             }
 
@@ -122,7 +123,7 @@ public class SepModelImpl implements SepModel {
         ReplicationAdmin replicationAdmin = new ReplicationAdmin(hbaseConf);
         try {
             String internalName = toInternalSubscriptionName(name);
-            if (!replicationAdmin.listPeers().containsKey(internalName)) {
+            if (!replicationAdmin.listPeerConfigs().containsKey(internalName)) {
                 log.error("Requested to remove a subscription which does not exist, skipping silently: '" + name + "'");
                 return false;
             } else {
@@ -163,7 +164,7 @@ public class SepModelImpl implements SepModel {
         ReplicationAdmin replicationAdmin = new ReplicationAdmin(hbaseConf);
         try {
             String internalName = toInternalSubscriptionName(name);
-            return replicationAdmin.listPeers().containsKey(internalName);
+            return replicationAdmin.listPeerConfigs().containsKey(internalName);
         } finally {
             Closer.close(replicationAdmin);
         }

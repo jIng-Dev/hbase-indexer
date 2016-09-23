@@ -73,7 +73,7 @@ public abstract class AbstractPrefixMatchingExtractor implements ByteArrayExtrac
 
     @Override
     public boolean isApplicable(KeyValue keyValue) {
-        return CellUtil.matchingFamily(keyValue, columnFamily) && Bytes.startsWith(keyValue.getQualifier(), prefix);
+        return CellUtil.matchingFamily(keyValue, columnFamily) && Bytes.startsWith(CellUtil.cloneQualifier(keyValue), prefix);
     }
 
     @Override

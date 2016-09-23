@@ -22,7 +22,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import com.google.common.collect.Table;
 import com.ngdata.hbaseindexer.ConfigureUtil;
 import com.ngdata.hbaseindexer.conf.IndexerConf;
 import com.ngdata.hbaseindexer.conf.IndexerConf.RowReadMode;
@@ -38,11 +37,13 @@ import com.yammer.metrics.core.TimerContext;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrInputDocument;
@@ -80,7 +81,7 @@ public abstract class Indexer {
      * Instantiate an indexer based on the given {@link IndexerConf}.
      */
     public static Indexer createIndexer(String indexerName, IndexerConf conf, String tableName, ResultToSolrMapper mapper,
-                                        HTablePool tablePool, Sharder sharder, SolrInputDocumentWriter solrWriter) {
+                                        Connection tablePool, Sharder sharder, SolrInputDocumentWriter solrWriter) {
         switch (conf.getMappingType()) {
             case COLUMN:
                 return new ColumnBasedIndexer(indexerName, conf, tableName, mapper, sharder, solrWriter);
@@ -185,7 +186,7 @@ public abstract class Indexer {
      */
     private Map<Integer, Map<String, SolrInputDocument>> shardByMapKey(Map<String, SolrInputDocument> documentsToAdd)
             throws SharderException {
-        Table<Integer, String, SolrInputDocument> table = HashBasedTable.create();
+        com.google.common.collect.Table<Integer, String, SolrInputDocument> table = HashBasedTable.create();
 
         for (Map.Entry<String, SolrInputDocument> entry : documentsToAdd.entrySet()) {
             table.put(sharder.getShard(entry.getKey()), entry.getKey(), entry.getValue());
@@ -220,11 +221,11 @@ public abstract class Indexer {
 
     static class RowBasedIndexer extends Indexer {
 
-        private HTablePool tablePool;
+        private Connection tablePool;
         private Timer rowReadTimer;
 
         public RowBasedIndexer(String indexerName, IndexerConf conf, String tableName, ResultToSolrMapper mapper,
-                               HTablePool tablePool,
+                               Connection tablePool,
                                Sharder sharder, SolrInputDocumentWriter solrWriter) {
             super(indexerName, conf, tableName, mapper, sharder, solrWriter);
             this.tablePool = tablePool;
@@ -235,7 +236,7 @@ public abstract class Indexer {
         private Result readRow(RowData rowData) throws IOException {
             TimerContext timerContext = rowReadTimer.time();
             try {
-                HTableInterface table = tablePool.getTable(rowData.getTable());
+                Table table = tablePool.getTable(TableName.valueOf(rowData.getTable()));
                 try {
                     Get get = mapper.getGet(rowData.getRow());
                     return table.get(get);
@@ -298,8 +299,8 @@ public abstract class Indexer {
             for (RowData rowData : rowDataList) {
                 // Check if the event contains changes to relevant key values
                 boolean relevant = false;
-                for (KeyValue kv : rowData.getKeyValues()) {
-                    if (mapper.isRelevantKV(kv) || kv.isDelete()) {
+                for (Cell kv : rowData.getKeyValues()) {
+                    if (mapper.isRelevantKV((KeyValue)kv) || CellUtil.isDelete(kv)) {
                         relevant = true;
                         break;
                     }
@@ -335,7 +336,7 @@ public abstract class Indexer {
                 String documentId = idToKvEntry.getKey();
 
                 KeyValue keyValue = idToKvEntry.getValue();
-                if (keyValue.isDelete()) {
+                if (CellUtil.isDelete(keyValue)) {
                     handleDelete(documentId, keyValue, updateCollector, uniqueKeyFormatter);
                 } else {
                     Result result = Result.create(Collections.<Cell>singletonList(keyValue));
@@ -359,7 +360,7 @@ public abstract class Indexer {
 
         private void handleDelete(String documentId, KeyValue deleteKeyValue, SolrUpdateCollector updateCollector,
                                   UniqueKeyFormatter uniqueKeyFormatter) {
-            byte deleteType = deleteKeyValue.getType();
+            byte deleteType = deleteKeyValue.getTypeByte();
             if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
                 updateCollector.deleteById(documentId);
             } else if (deleteType == KeyValue.Type.DeleteFamily.getCode()) {
@@ -393,11 +394,11 @@ public abstract class Indexer {
             String familyValue;
             if (uniqueKeyFormatter instanceof UniqueTableKeyFormatter) {
                 UniqueTableKeyFormatter uniqueTableKeyFormatter = (UniqueTableKeyFormatter) uniqueKeyFormatter;
-                rowValue = uniqueTableKeyFormatter.formatRow(deleteKeyValue.getRow(), tableName);
-                familyValue = uniqueTableKeyFormatter.formatFamily(deleteKeyValue.getFamily(), tableName);
+                rowValue = uniqueTableKeyFormatter.formatRow(CellUtil.cloneRow(deleteKeyValue), tableName);
+                familyValue = uniqueTableKeyFormatter.formatFamily(CellUtil.cloneFamily(deleteKeyValue), tableName);
             } else {
-                rowValue = uniqueKeyFormatter.formatRow(deleteKeyValue.getRow());
-                familyValue = uniqueKeyFormatter.formatFamily(deleteKeyValue.getFamily());
+                rowValue = uniqueKeyFormatter.formatRow(CellUtil.cloneRow(deleteKeyValue));
+                familyValue = uniqueKeyFormatter.formatFamily(CellUtil.cloneFamily(deleteKeyValue));
             }
 
             if (rowField != null && cfField != null) {
@@ -415,7 +416,7 @@ public abstract class Indexer {
         private void deleteRow(KeyValue deleteKeyValue, SolrUpdateCollector updateCollector,
                                UniqueKeyFormatter uniqueKeyFormatter, byte[] tableName) {
             String rowField = conf.getRowField();
-            String rowValue = uniqueKeyFormatter.formatRow(deleteKeyValue.getRow());
+            String rowValue = uniqueKeyFormatter.formatRow(CellUtil.cloneRow(deleteKeyValue));
             if (rowField != null) {
                 updateCollector.deleteByQuery(String.format("%s:%s", rowField, rowValue));
             } else {
@@ -431,7 +432,8 @@ public abstract class Indexer {
         private Map<String, KeyValue> calculateUniqueEvents(List<RowData> rowDataList) {
             Map<String, KeyValue> idToKeyValue = Maps.newHashMap();
             for (RowData rowData : rowDataList) {
-                for (KeyValue kv : rowData.getKeyValues()) {
+                for (Cell cell : rowData.getKeyValues()) {
+                    KeyValue kv = (KeyValue) cell;
                     if (mapper.isRelevantKV(kv)) {
                         String id;
                         if (uniqueKeyFormatter instanceof UniqueTableKeyFormatter) {

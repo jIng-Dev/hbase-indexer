@@ -36,10 +36,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -69,8 +70,8 @@ public class SepConsumerIT {
 
     private static Configuration clusterConf;
     private static HBaseTestingUtility hbaseTestUtil;
-    private static HBaseAdmin hbaseAdmin;
-    private static HTable htable;
+    private static Table htable;
+    private static Connection connection;
 
     private ZooKeeperItf zkItf;
     private SepModel sepModel;
@@ -82,7 +83,10 @@ public class SepConsumerIT {
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         clusterConf = HBaseConfiguration.create();
-        clusterConf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+        
+        // HACK disabled because always on in hbase-2 (see HBASE-16040)
+        // clusterConf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+        
         clusterConf.setLong("replication.source.sleepforretries", 50);
         //clusterConf.set("replication.replicationsource.implementation", SepReplicationSource.class.getName());
         clusterConf.setInt("hbase.master.info.port", -1);
@@ -93,7 +97,7 @@ public class SepConsumerIT {
         hbaseTestUtil.startMiniZKCluster(1);
         hbaseTestUtil.startMiniCluster(1);
 
-        HTableDescriptor tableDescriptor = new HTableDescriptor(TABLE_NAME);
+        HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
         HColumnDescriptor dataColfamDescriptor = new HColumnDescriptor(DATA_COL_FAMILY);
         dataColfamDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
         HColumnDescriptor payloadColfamDescriptor = new HColumnDescriptor(PAYLOAD_COL_FAMILY);
@@ -101,19 +105,21 @@ public class SepConsumerIT {
         tableDescriptor.addFamily(dataColfamDescriptor);
         tableDescriptor.addFamily(payloadColfamDescriptor);
 
-        hbaseAdmin = new HBaseAdmin(clusterConf);
-        hbaseAdmin.createTable(tableDescriptor);
-        htable = new HTable(clusterConf, TABLE_NAME);
+        connection = ConnectionFactory.createConnection(clusterConf);
+        connection.getAdmin().createTable(tableDescriptor);
+        htable = connection.getTable(TableName.valueOf(TABLE_NAME));
     }
 
     @AfterClass
     public static void tearDownAfterClass() throws Exception {
-        hbaseAdmin.close();
+        if (connection != null) {
+            connection.close();
+        }
         hbaseTestUtil.shutdownMiniCluster();
     }
 
     @Before
-    public void setUp() throws ReplicationException, ZkConnectException, InterruptedException, KeeperException, IOException {
+    public void setUp() throws ZkConnectException, InterruptedException, KeeperException, IOException {
         zkItf = ZkUtil.connect("localhost:" + hbaseTestUtil.getZkCluster().getClientPort(), 30000);
         sepModel = new SepModelImpl(zkItf, clusterConf);
         sepModel.addSubscription(SUBSCRIPTION_NAME);
@@ -129,7 +135,7 @@ public class SepConsumerIT {
     }
 
     @After
-    public void tearDown() throws ReplicationException, IOException {
+    public void tearDown() throws IOException {
         sepConsumer.stop();
         sepConsumerWithPayloads.stop();
         sepModel.removeSubscription(SUBSCRIPTION_NAME);
@@ -138,10 +144,10 @@ public class SepConsumerIT {
     }
 
     @Test
-    public void testEvents_SimpleSetOfPuts() throws IOException, InterruptedException {
+    public void testEvents_SimpleSetOfPuts() throws IOException {
         for (int i = 0; i < 3; i++) {
             Put put = new Put(Bytes.toBytes("row " + i));
-            put.add(DATA_COL_FAMILY, Bytes.toBytes("qualifier"), Bytes.toBytes("value"));
+            put.addColumn(DATA_COL_FAMILY, Bytes.toBytes("qualifier"), Bytes.toBytes("value"));
             htable.put(put);
         }
         waitForEvents(eventListener, 3);
@@ -162,12 +168,12 @@ public class SepConsumerIT {
         Put putA = new Put(Bytes.toBytes("rowA"));
         Put putB = new Put(Bytes.toBytes("rowB"));
 
-        putA.add(DATA_COL_FAMILY, Bytes.toBytes("a1"), Bytes.toBytes("valuea1"));
-        putA.add(DATA_COL_FAMILY, Bytes.toBytes("a2"), Bytes.toBytes("valuea2"));
+        putA.addColumn(DATA_COL_FAMILY, Bytes.toBytes("a1"), Bytes.toBytes("valuea1"));
+        putA.addColumn(DATA_COL_FAMILY, Bytes.toBytes("a2"), Bytes.toBytes("valuea2"));
 
-        putB.add(DATA_COL_FAMILY, Bytes.toBytes("b1"), Bytes.toBytes("valueb1"));
-        putB.add(DATA_COL_FAMILY, Bytes.toBytes("b2"), Bytes.toBytes("valueb2"));
-        putB.add(DATA_COL_FAMILY, Bytes.toBytes("b3"), Bytes.toBytes("valueb3"));
+        putB.addColumn(DATA_COL_FAMILY, Bytes.toBytes("b1"), Bytes.toBytes("valueb1"));
+        putB.addColumn(DATA_COL_FAMILY, Bytes.toBytes("b2"), Bytes.toBytes("valueb2"));
+        putB.addColumn(DATA_COL_FAMILY, Bytes.toBytes("b3"), Bytes.toBytes("valueb3"));
 
         htable.put(putA);
         htable.put(putB);
@@ -197,8 +203,8 @@ public class SepConsumerIT {
     @Test
     public void testEvents_WithPayload() throws IOException {
         Put put = new Put(Bytes.toBytes("rowkey"));
-        put.add(DATA_COL_FAMILY, Bytes.toBytes("data"), Bytes.toBytes("value"));
-        put.add(PAYLOAD_COL_FAMILY, PAYLOAD_COL_QUALIFIER, Bytes.toBytes("payload"));
+        put.addColumn(DATA_COL_FAMILY, Bytes.toBytes("data"), Bytes.toBytes("value"));
+        put.addColumn(PAYLOAD_COL_FAMILY, PAYLOAD_COL_QUALIFIER, Bytes.toBytes("payload"));
         htable.put(put);
 
         waitForEvents(eventListener, 1);
@@ -229,7 +235,7 @@ public class SepConsumerIT {
         return permString;
     }
 
-    private void waitForEvents(TestEventListener listener, int expectedNumEvents) throws IOException {
+    private void waitForEvents(TestEventListener listener, int expectedNumEvents) {
         long start = System.currentTimeMillis();
         while (listener.getEvents().size() < expectedNumEvents) {
             if (System.currentTimeMillis() - start > WAIT_TIMEOUT) {

@@ -31,9 +31,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
@@ -69,8 +72,8 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
     private static final File MINIMR_CONF_DIR = new File(RESOURCES_DIR + "/solr/minimr");
     
     private static CloudSolrClient COLLECTION1;
-    private static HBaseAdmin HBASE_ADMIN;
-    private static HTable RECORD_TABLE;
+    private static Admin HBASE_ADMIN;
+    private static Table RECORD_TABLE;
     private static String SOLR_ZK;
     private static String INDEXER_ZK;
     private static IndexerModelImpl INDEXER_MODEL;
@@ -99,7 +102,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
         SOLR_TEST_UTILITY.createCollection("collection1", "config1", 2);
         SOLR_TEST_UTILITY.createCollection("collection2", "config1", 2);
 
-        COLLECTION1 = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());
+        COLLECTION1 = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();        
         COLLECTION1.setDefaultCollection("collection1");
 
         SOLR_ZK = "127.0.0.1:" + zkClientPort + "/solr";
@@ -120,12 +123,13 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
         
         Closer.close(zkItf);
         
-        HTableDescriptor tableDescriptor = new HTableDescriptor(TEST_TABLE_NAME);
+        HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TEST_TABLE_NAME));
         tableDescriptor.addFamily(new HColumnDescriptor(TEST_COLFAM_NAME));
-        HBASE_ADMIN = new HBaseAdmin(HBASE_TEST_UTILITY.getConfiguration());
+        Connection connection = ConnectionFactory.createConnection(HBASE_TEST_UTILITY.getConfiguration());
+        HBASE_ADMIN = connection.getAdmin();
         HBASE_ADMIN.createTable(tableDescriptor, new byte[][]{Bytes.toBytes("row0800"), Bytes.toBytes("row1600")});
         
-        RECORD_TABLE = new HTable(HBASE_TEST_UTILITY.getConfiguration(), TEST_TABLE_NAME);
+        RECORD_TABLE = connection.getTable(TableName.valueOf(TEST_TABLE_NAME)); 
         
         for (int i = 0; i < RECORD_COUNT; i++) {
             writeHBaseRecord(String.format("row%04d", i), ImmutableMap.of(
@@ -140,6 +144,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
     public static void tearDownClass() throws Exception {
         SOLR_TEST_UTILITY.stop();
         HBASE_ADMIN.close();
+        HBASE_ADMIN.getConnection().close();
         HBASE_TEST_UTILITY.shutdownMiniMapReduceCluster();
         HBASE_TEST_UTILITY.shutdownMiniCluster();
         MR_TEST_UTIL.tearDownSolrEnvironment();
@@ -182,7 +187,7 @@ public class HBaseMapReduceIndexerToolGoLiveTest {
     private static void writeHBaseRecord(String row, Map<String,String> qualifiersAndValues) throws IOException {
         Put put = new Put(Bytes.toBytes(row));
         for (Entry<String, String> entry : qualifiersAndValues.entrySet()) {
-            put.add(TEST_COLFAM_NAME, Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
+            put.addColumn(TEST_COLFAM_NAME, Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
         }
         RECORD_TABLE.put(put);
     }

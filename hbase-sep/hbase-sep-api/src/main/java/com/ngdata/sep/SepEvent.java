@@ -20,7 +20,6 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +31,7 @@ public class SepEvent {
 
     private final byte[] table;
     private final byte[] row;
-    private final List<KeyValue> keyValues;
+    private final List<Cell> keyValues;
     private final byte[] payload;
 
     /**
@@ -43,7 +42,7 @@ public class SepEvent {
      * @param keyValues The list of updates to the HBase row
      * @param payload Optional additional payload containing data about the data mutation(s)
      */
-    public SepEvent(byte[] table, byte[] row, List<KeyValue> keyValues, byte[] payload) {
+    public SepEvent(byte[] table, byte[] row, List<Cell> keyValues, byte[] payload) {
         this.table = table;
         this.row = row;
         this.payload = payload;
@@ -59,9 +58,9 @@ public class SepEvent {
      * @param payload Optional additional payload containing data about the data mutation(s)
      */
     public static SepEvent create(byte[] table, byte[] row, List<Cell> cells, byte[] payload) {
-        List<KeyValue> keyValues = new ArrayList<KeyValue>(cells.size());
+        List<Cell> keyValues = new ArrayList<Cell>(cells.size());
         for (Cell cell : cells) {
-            keyValues.add((KeyValue)cell);
+            keyValues.add(cell);
         }
         return new SepEvent(table, row, keyValues, payload);
     }
@@ -98,7 +97,7 @@ public class SepEvent {
      * 
      * @return list of key values
      */
-    public List<KeyValue> getKeyValues() {
+    public List<Cell> getKeyValues() {
         return keyValues;
     }
 

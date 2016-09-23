@@ -39,10 +39,13 @@ import com.ngdata.hbaseindexer.morphline.MorphlineResultToSolrMapper;
 import com.ngdata.hbaseindexer.parse.ResultToSolrMapper;
 import com.ngdata.sep.util.io.Closer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
@@ -126,9 +129,11 @@ class IndexerDryRun {
         
         Scan scan = indexingOpts.getScans().get(0);
         
-        HTable htable = null;
+        Table htable = null;
+        Connection connection = null;
         try {
-            htable = new HTable(hbaseConf, indexingSpec.getTableName());
+            connection = ConnectionFactory.createConnection(hbaseConf);
+            htable = connection.getTable(TableName.valueOf(indexingSpec.getTableName()));
             ResultScanner scanner = htable.getScanner(scan);
             for (Result result : scanner) {
                 indexer.indexRowData(ImmutableList.<RowData>of(new ResultWrappingRowData(result,
@@ -138,6 +143,13 @@ class IndexerDryRun {
             throw new RuntimeException(e);
         } finally {
             Closer.close(htable);
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (IOException ioe) {
+                    ; // ignore
+                }
+            }
         }
         
         HBaseMapReduceIndexerTool.goodbye(null, programStartTime);

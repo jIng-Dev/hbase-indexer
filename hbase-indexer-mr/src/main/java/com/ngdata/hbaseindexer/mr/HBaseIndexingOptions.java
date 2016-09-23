@@ -39,7 +39,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
@@ -69,7 +70,7 @@ class HBaseIndexingOptions {
 
     private Configuration conf;
     @VisibleForTesting
-    protected HBaseAdmin hBaseAdmin;
+    protected Admin hBaseAdmin;
     private List<Scan> scans;
     private IndexingSpecification hbaseIndexingSpecification;
     // Flag that we have created our own output directory
@@ -202,13 +203,13 @@ class HBaseIndexingOptions {
         } else if (indexerConf.tableNameIsRegex()) {
             HTableDescriptor[] tables;
             try {
-                HBaseAdmin admin = getHbaseAdmin();
+                Admin admin = getHbaseAdmin();
                 tables = admin.listTables(indexerConf.getTable());
             } catch (IOException e) {
                 throw new RuntimeException("Error occurred fetching hbase tables", e);
             }
             for (HTableDescriptor descriptor : tables) {
-                tableNames.add(descriptor.getName());
+                tableNames.add(descriptor.getTableName().getName());
             }
         } else {
             tableNames.add(Bytes.toBytesBinary(indexerConf.getTable()));
@@ -303,9 +304,9 @@ class HBaseIndexingOptions {
 
     }
 
-    private HBaseAdmin getHbaseAdmin() throws IOException {
+    private Admin getHbaseAdmin() throws IOException {
         if (hBaseAdmin == null) {
-            hBaseAdmin = new HBaseAdmin(conf);
+            hBaseAdmin = ConnectionFactory.createConnection(conf).getAdmin();
         }
         return hBaseAdmin;
     }

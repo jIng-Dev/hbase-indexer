@@ -65,7 +65,7 @@ import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
@@ -103,7 +103,7 @@ public class IndexerSupervisor {
 
     private final Map<String, String> indexerProcessIds;
 
-    private final HTablePool htablePool;
+    private final Connection htablePool;
 
     private final Configuration hbaseConf;
 
@@ -116,8 +116,7 @@ public class IndexerSupervisor {
 
     public IndexerSupervisor(IndexerModel indexerModel, ZooKeeperItf zk, String hostName,
                              IndexerRegistry indexerRegistry, IndexerProcessRegistry indexerProcessRegistry,
-                             HTablePool htablePool, Configuration hbaseConf)
-            throws IOException, InterruptedException {
+                             Connection htablePool, Configuration hbaseConf) {
         this.indexerModel = indexerModel;
         this.zk = zk;
         this.hostName = hostName;

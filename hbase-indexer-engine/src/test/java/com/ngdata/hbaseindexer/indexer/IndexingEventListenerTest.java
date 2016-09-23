@@ -26,12 +26,15 @@ import com.ngdata.hbaseindexer.conf.IndexerConfBuilder;
 import com.ngdata.hbaseindexer.parse.ResultToSolrMapper;
 import com.ngdata.hbaseindexer.parse.SolrUpdateWriter;
 import com.ngdata.sep.SepEvent;
+
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrInputDocument;
@@ -63,18 +66,18 @@ public class IndexingEventListenerTest {
     private static final String TABLE_B = "_table_b_";
 
     private SolrInputDocumentWriter solrDocumentWriter;
-    private HTablePool tablePool;
-    private HTableInterface tableA;
-    private HTableInterface tableB;
+    private Connection tablePool;
+    private Table tableA;
+    private Table tableB;
 
     @Before
-    public void setUp() {
+    public void setUp() throws IOException {
         solrDocumentWriter = mock(SolrInputDocumentWriter.class);
-        tablePool = mock(HTablePool.class);
-        tableA = mock(HTableInterface.class);
-        tableB = mock(HTableInterface.class);
-        when(tablePool.getTable(TABLE_A.getBytes(Charsets.UTF_8))).thenReturn(tableA);
-        when(tablePool.getTable(TABLE_B.getBytes(Charsets.UTF_8))).thenReturn(tableB);
+        tablePool = mock(Connection.class);
+        tableA = mock(Table.class);
+        tableB = mock(Table.class);
+        when(tablePool.getTable(TableName.valueOf(TABLE_A))).thenReturn(tableA);
+        when(tablePool.getTable(TableName.valueOf(TABLE_B))).thenReturn(tableB);
     }
 
     /**
@@ -109,7 +112,7 @@ public class IndexingEventListenerTest {
         Indexer indexer = Indexer.createIndexer("index name", conf, "record", mapper, tablePool, null, solrDocumentWriter);
         IndexingEventListener indexingEventListener = new IndexingEventListener(indexer, TABLE_A, false);
 
-        List<KeyValue> kvs = Lists.newArrayList(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"),
+        List<Cell> kvs = Lists.newArrayList((Cell)new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"),
                 Bytes.toBytes("qual"), Bytes.toBytes("value")));
         SepEvent event = new SepEvent(Bytes.toBytes(TABLE_A), Bytes.toBytes("row1"), kvs, null);
         indexingEventListener.processEvents(Collections.singletonList(event));
@@ -154,7 +157,7 @@ public class IndexingEventListenerTest {
         Indexer indexer = Indexer.createIndexer("index name", conf, "record", mapper, tablePool, null, solrDocumentWriter);
         IndexingEventListener indexingEventListener = new IndexingEventListener(indexer, TABLE_A, false);
 
-        List<KeyValue> kvs = Lists.newArrayList(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"),
+        List<Cell> kvs = Lists.newArrayList((Cell)new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"),
                 Bytes.toBytes("qual"), Bytes.toBytes("val")));
         SepEvent event = new SepEvent(Bytes.toBytes(TABLE_A), Bytes.toBytes("row1"), kvs, null);
         indexingEventListener.processEvents(Collections.singletonList(event));
@@ -174,12 +177,12 @@ public class IndexingEventListenerTest {
 
         ResultToSolrMapper mapper = createHbaseToSolrMapper(false);
 
-        when(tableA.get(any(Get.class))).thenReturn(Result.create(Lists.<Cell>newArrayList(new KeyValue())));
+        when(tableA.get(any(Get.class))).thenReturn(Result.create(Collections.<Cell>singletonList(new KeyValue())));
 
         Indexer indexer = Indexer.createIndexer("index name", conf, "record", mapper, tablePool, null, solrDocumentWriter);
         IndexingEventListener indexingEventListener = new IndexingEventListener(indexer, TABLE_A, false);
 
-        List<KeyValue> kvs = Lists.newArrayList(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"),
+        List<Cell> kvs = Lists.newArrayList((Cell)new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"),
                 Bytes.toBytes("qual"), Bytes.toBytes("value")));
         SepEvent event = new SepEvent(Bytes.toBytes(TABLE_A), Bytes.toBytes("row1"), kvs, null);
         indexingEventListener.processEvents(Collections.singletonList(event));
@@ -203,7 +206,7 @@ public class IndexingEventListenerTest {
         Indexer indexer = Indexer.createIndexer("index name", conf, "record", mapper, tablePool, null, solrDocumentWriter);
         IndexingEventListener indexingEventListener = new IndexingEventListener(indexer, TABLE_A, false);
 
-        List<KeyValue> kvs = Lists.newArrayList(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"),
+        List<Cell> kvs = Lists.newArrayList((Cell)new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"),
                 Bytes.toBytes("qual"), Bytes.toBytes("value")));
         SepEvent event = new SepEvent(Bytes.toBytes(TABLE_A), Bytes.toBytes("row1"), kvs, null);
         indexingEventListener.processEvents(Collections.singletonList(event));
@@ -224,7 +227,7 @@ public class IndexingEventListenerTest {
         ResultToSolrMapper mapper = new ResultToSolrMapper() {
             @Override
             public boolean isRelevantKV(KeyValue kv) {
-                return Bytes.toString(kv.getFamily()).equals("messages");
+                return Bytes.toString(CellUtil.cloneFamily(kv)).equals("messages");
             }
 
             @Override
@@ -246,8 +249,8 @@ public class IndexingEventListenerTest {
         Indexer indexer = Indexer.createIndexer("index name", conf, TABLE_A, mapper, null, null, solrDocumentWriter);
         IndexingEventListener indexingEventListener = new IndexingEventListener(indexer, TABLE_A, false);
 
-        List<KeyValue> kvs = Lists.newArrayList(
-                new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("messages"), Bytes.toBytes("msg1"),
+        List<Cell> kvs = Lists.newArrayList(
+            (Cell)new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("messages"), Bytes.toBytes("msg1"),
                         Bytes.toBytes("the message")), new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("messages"),
                         Bytes.toBytes("msg2"), Bytes.toBytes("another message")));
 
@@ -273,17 +276,17 @@ public class IndexingEventListenerTest {
         final String multiTableAName = tablePrefix + "a_";
         final String multiTableBName = tablePrefix + "_multitable_b_";
 
-        final HTableInterface multitableA = mock(HTableInterface.class);
-        final HTableInterface multitableB = mock(HTableInterface.class);
-        when(tablePool.getTable(multiTableAName.getBytes(Charsets.UTF_8))).thenReturn(multitableA);
-        when(tablePool.getTable(multiTableBName.getBytes(Charsets.UTF_8))).thenReturn(multitableB);
+        final Table multitableA = mock(Table.class);
+        final Table multitableB = mock(Table.class);
+        when(tablePool.getTable(TableName.valueOf(multiTableAName))).thenReturn(multitableA);
+        when(tablePool.getTable(TableName.valueOf(multiTableBName))).thenReturn(multitableB);
 
         final IndexerConf indexerConf = new IndexerConfBuilder().table(tablePrefix + ".*").build();
         ResultToSolrMapper mapper = createHbaseToSolrMapper(true);
         Indexer indexer = Indexer.createIndexer("index name", indexerConf, tablePrefix+ ".*", mapper, tablePool, null, solrDocumentWriter);
         IndexingEventListener indexingEventListener = new IndexingEventListener(indexer, tablePrefix+ ".*", true);
-        List<KeyValue> kvs = Lists.newArrayList(
-                new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("messages"), Bytes.toBytes("msg1"),
+        List<Cell> kvs = Lists.newArrayList(
+                (Cell)new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("messages"), Bytes.toBytes("msg1"),
                         Bytes.toBytes("the message")), new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("messages"),
                 Bytes.toBytes("msg2"), Bytes.toBytes("another message")));
 

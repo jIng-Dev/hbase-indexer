@@ -25,7 +25,6 @@ import org.apache.solr.client.solrj.embedded.JettySolrRunner;
 import org.apache.solr.common.cloud.OnReconnect;
 import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.solr.common.cloud.ZkConfigManager;
-import org.apache.zookeeper.KeeperException;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -54,11 +53,11 @@ public class SolrTestingUtility {
     private String zkConnectString;
     private Map<String, String> configProperties;
 
-    public SolrTestingUtility(int zkClientPort, int solrPort) throws IOException {
+    public SolrTestingUtility(int zkClientPort, int solrPort) {
         this(zkClientPort, solrPort, ImmutableMap.<String, String>of());
     }
 
-    public SolrTestingUtility(int zkClientPort, int solrPort, Map<String, String> configProperties) throws IOException {
+    public SolrTestingUtility(int zkClientPort, int solrPort, Map<String, String> configProperties) {
         this.zkClientPort = zkClientPort;
         this.zkConnectString = "localhost:" + zkClientPort + "/solr";
         this.solrPort = solrPort;
@@ -139,7 +138,7 @@ public class SolrTestingUtility {
      * solrconf, if you want to upload a full directory use {@link #uploadConfig(String, File)}.
      */
     public void uploadConfig(String confName, byte[] schema, byte[] solrconf)
-            throws InterruptedException, IOException, KeeperException {
+            throws IOException {
         // Write schema & solrconf to temporary dir, upload dir, delete tmp dir
         File tmpConfDir = Files.createTempDir();
         Files.copy(ByteStreams.newInputStreamSupplier(schema), new File(tmpConfDir, "schema.xml"));
@@ -152,7 +151,7 @@ public class SolrTestingUtility {
      * Utility method to upload a Solr config into ZooKeeper. If you don't have the config in the form of
      * a filesystem directory, you might want to use {@link #uploadConfig(String, byte[], byte[])}.
      */
-    public void uploadConfig(String confName, File confDir) throws InterruptedException, IOException, KeeperException {
+    public void uploadConfig(String confName, File confDir) throws IOException {
         SolrZkClient zkClient = new SolrZkClient(zkConnectString, 30000, 30000,
                 new OnReconnect() {
                     @Override

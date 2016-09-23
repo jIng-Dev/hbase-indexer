@@ -63,7 +63,7 @@ public class BasePayloadExtractor implements PayloadExtractor {
     @Override
     public byte[] extractPayload(byte[] tableName, KeyValue keyValue) {
         if (Bytes.equals(this.tableName, tableName) && CellUtil.matchingColumn(keyValue, columnFamily, columnQualifier)) {
-            return keyValue.getValue();
+            return CellUtil.cloneValue(keyValue);
         } else {
             return null;
         }

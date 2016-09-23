@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +51,6 @@ public class SepConsumerTest {
     private static final byte[] DATA_COLFAM = Bytes.toBytes("data");
     private static final byte[] PAYLOAD_QUALIFIER = Bytes.toBytes("pl");
     private static final byte[] encodedRegionName = Bytes.toBytes("1028785192");
-    private static final UUID clusterUUID = UUID.randomUUID();
     private static final List<UUID> clusterUUIDs = new ArrayList<UUID>();
 
     private EventListener eventListener;
@@ -60,7 +58,7 @@ public class SepConsumerTest {
     private SepConsumer sepConsumer;
 
     @Before
-    public void setUp() throws IOException, InterruptedException, KeeperException {
+    public void setUp() throws IOException, InterruptedException {
         eventListener = mock(EventListener.class);
         zkItf = mock(ZooKeeperItf.class);
         PayloadExtractor payloadExtractor = new BasePayloadExtractor(TABLE_NAME, DATA_COLFAM, PAYLOAD_QUALIFIER);
@@ -96,7 +94,7 @@ public class SepConsumerTest {
         WAL.Entry hlogEntry = createHlogEntry(TABLE_NAME, new KeyValue(rowKey, DATA_COLFAM,
                 PAYLOAD_QUALIFIER, payloadData));
 
-        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{hlogEntry});
+        replicateWALEntry(new WAL.Entry[]{hlogEntry});
 
         SepEvent expectedSepEvent = SepEvent.create(TABLE_NAME, rowKey,
                 hlogEntry.getEdit().getCells(), payloadData);
@@ -118,9 +116,9 @@ public class SepConsumerTest {
         WAL.Entry hlogEntryAfterTimestamp = createHlogEntry(TABLE_NAME, SUBSCRIPTION_TIMESTAMP + 1,
                 new KeyValue(rowKey, DATA_COLFAM, PAYLOAD_QUALIFIER, payloadDataAfterTimestamp));
 
-        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{hlogEntryBeforeTimestamp});
-        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{hlogEntryOnTimestamp});
-        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{hlogEntryAfterTimestamp});
+        replicateWALEntry(new WAL.Entry[]{hlogEntryBeforeTimestamp});
+        replicateWALEntry(new WAL.Entry[]{hlogEntryOnTimestamp});
+        replicateWALEntry(new WAL.Entry[]{hlogEntryAfterTimestamp});
 
         SepEvent expectedEventOnTimestamp = SepEvent.create(TABLE_NAME, rowKey,
                 hlogEntryOnTimestamp.getEdit().getCells(), payloadDataOnTimestamp);
@@ -142,7 +140,7 @@ public class SepConsumerTest {
 
         WAL.Entry entry = createHlogEntry(TABLE_NAME, kvA, kvB);
 
-        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{entry});
+        replicateWALEntry(new WAL.Entry[]{entry});
 
         // We should get the first payload in our event (and the second one will be ignored, although the KeyValue will
         // be present in the event
@@ -166,7 +164,7 @@ public class SepConsumerTest {
 
         WAL.Entry entry = createHlogEntry(TABLE_NAME, kvA, kvB);
 
-        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{entry});
+        replicateWALEntry(new WAL.Entry[]{entry});
 
         SepEvent expectedEventA = SepEvent.create(TABLE_NAME, rowKeyA, Lists.newArrayList(kvA),
                 Bytes.toBytes("data"));
@@ -174,5 +172,9 @@ public class SepConsumerTest {
                 Bytes.toBytes("data"));
 
         verify(eventListener).processEvents(Lists.newArrayList(expectedEventA, expectedEventB));
+    }
+    
+    private void replicateWALEntry(WAL.Entry[] entries) throws IOException {
+        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, entries);
     }
 }

@@ -40,7 +40,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
 import org.apache.sentry.binding.hbaseindexer.rest.SentryIndexResource;
@@ -60,7 +61,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Main {
     private final static Log log = LogFactory.getLog(Main.class);
-    private HTablePool tablePool;
+    private Connection tablePool;
     private WriteableIndexerModel indexerModel;
     private SepModel sepModel;
     private IndexerMaster indexerMaster;
@@ -133,7 +134,7 @@ public class Main {
         }
         zk = new StateWatchingZooKeeper(zkConnectString, zkSessionTimeout, aclProvider);
 
-        tablePool = new HTablePool(conf, 10 /* TODO configurable */);
+        tablePool = ConnectionFactory.createConnection(conf);
 
         String zkRoot = conf.get(ConfKeys.ZK_ROOT_NODE);
 

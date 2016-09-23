@@ -17,7 +17,6 @@
 package com.ngdata.hbaseindexer.indexer;
 
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Map;
 
@@ -35,9 +34,9 @@ import org.apache.solr.client.solrj.impl.HttpSolrClient;
  * Create cloud or classic {@link SolrClient} instances from a map of solr connection parameters.
  */
 public class SolrClientFactory {
-    public static SolrClient createCloudSolrClient(Map<String, String> connectionParameters, int zkSessionTimeout) throws MalformedURLException {
+    public static SolrClient createCloudSolrClient(Map<String, String> connectionParameters, int zkSessionTimeout) {
         String solrZk = connectionParameters.get(SolrConnectionParams.ZOOKEEPER);
-        CloudSolrClient solr = new CloudSolrClient(solrZk);
+        CloudSolrClient solr = new CloudSolrClient.Builder().withZkHost(solrZk).build();
         solr.setZkClientTimeout(zkSessionTimeout);
         solr.setZkConnectTimeout(zkSessionTimeout);      
         String collection = connectionParameters.get(SolrConnectionParams.COLLECTION);
@@ -49,7 +48,7 @@ public class SolrClientFactory {
     public static List<SolrClient> createHttpSolrClients(Map<String, String> connectionParams, HttpClient httpClient) {
         List<SolrClient> result = Lists.newArrayList();
         for (String shard : SolrConnectionParamUtil.getShards(connectionParams)) {
-            result.add(new HttpSolrClient(shard, httpClient));
+            result.add(new HttpSolrClient.Builder(shard).withHttpClient(httpClient).build());
         }
         if (result.size() == 0) {
             throw new RuntimeException(

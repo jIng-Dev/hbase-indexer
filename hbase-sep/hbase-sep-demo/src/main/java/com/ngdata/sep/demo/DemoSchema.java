@@ -19,7 +19,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 
 import java.io.IOException;
 
@@ -30,9 +32,9 @@ public class DemoSchema {
     }
 
     public static void createSchema(Configuration hbaseConf) throws IOException {
-        HBaseAdmin admin = new HBaseAdmin(hbaseConf);
-        if (!admin.tableExists("sep-user-demo")) {
-            HTableDescriptor tableDescriptor = new HTableDescriptor("sep-user-demo");
+        Admin admin = ConnectionFactory.createConnection(hbaseConf).getAdmin();
+        if (!admin.tableExists(TableName.valueOf("sep-user-demo"))) {
+            HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf("sep-user-demo"));
 
             HColumnDescriptor infoCf = new HColumnDescriptor("info");
             infoCf.setScope(1);

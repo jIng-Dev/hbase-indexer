@@ -21,25 +21,22 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
 import com.ngdata.hbaseindexer.util.net.NetUtils;
 import com.ngdata.hbaseindexer.util.solr.SolrTestingUtility;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.hadoop.dedup.RetainMostRecentUpdateConflictResolver;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -50,50 +47,39 @@ import java.util.Map.Entry;
 
 import static org.junit.Assert.assertEquals;
 
-@Ignore
 public class IndexerDryRunTest {
 
     private static final byte[] TEST_TABLE_NAME = Bytes.toBytes("record");
     private static final byte[] TEST_COLFAM_NAME = Bytes.toBytes("info");
     
     private static final HBaseTestingUtility HBASE_TEST_UTILITY = HBaseTestingUtilityFactory.createTestUtility();
-    private static MRTestUtil MR_TEST_UTIL;
     private static SolrTestingUtility SOLR_TEST_UTILITY;
     
     
     private static CloudSolrClient COLLECTION;
-    private static HBaseAdmin HBASE_ADMIN;
+    private static Admin HBASE_ADMIN;
 
-    private HTable recordTable;
+    private Table recordTable;
     
     private HBaseIndexingOptions opts;
     
     @BeforeClass
     public static void setupBeforeClass() throws Exception {
-        MR_TEST_UTIL = new MRTestUtil(HBASE_TEST_UTILITY);
         HBASE_TEST_UTILITY.startMiniCluster();
-        MR_TEST_UTIL.startMrCluster();
-        MR_TEST_UTIL.setupSolrEnvironment();
         
-        FileSystem fs = FileSystem.get(HBASE_TEST_UTILITY.getConfiguration());
         int zkClientPort = HBASE_TEST_UTILITY.getZkCluster().getClientPort();
         
-        SOLR_TEST_UTILITY = new SolrTestingUtility(zkClientPort, NetUtils.getFreePort(),
-            ImmutableMap.of(
-                "solr.hdfs.blockcache.enabled", "false",
-                "solr.directoryFactory", "HdfsDirectoryFactory",
-                "solr.hdfs.home", fs.makeQualified(new Path("/solrdata")).toString()));
-
+        SOLR_TEST_UTILITY = new SolrTestingUtility(zkClientPort, NetUtils.getFreePort());
         SOLR_TEST_UTILITY.start();
         SOLR_TEST_UTILITY.uploadConfig("config1",
                 Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "schema.xml")),
                 Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "solrconfig.xml")));
         SOLR_TEST_UTILITY.createCore("collection1_core11", "collection1", "config1", 1);
 
-        COLLECTION = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());
+        COLLECTION = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();
         COLLECTION.setDefaultCollection("collection1");
         
-        HBASE_ADMIN = new HBaseAdmin(HBASE_TEST_UTILITY.getConfiguration());
+        HBASE_ADMIN = ConnectionFactory.createConnection(HBASE_TEST_UTILITY.getConfiguration()).getAdmin();
 
     }
 
@@ -101,18 +87,17 @@ public class IndexerDryRunTest {
     public static void tearDownClass() throws Exception {
         SOLR_TEST_UTILITY.stop();
         HBASE_ADMIN.close();
-        HBASE_TEST_UTILITY.shutdownMiniMapReduceCluster();
+        HBASE_ADMIN.getConnection().close();
         HBASE_TEST_UTILITY.shutdownMiniCluster();
-        MR_TEST_UTIL.tearDownSolrEnvironment();
     }
     
     @Before
     public void setUp() throws Exception {
-        HTableDescriptor tableDescriptor = new HTableDescriptor(TEST_TABLE_NAME);
+        HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TEST_TABLE_NAME));
         tableDescriptor.addFamily(new HColumnDescriptor(TEST_COLFAM_NAME));
         HBASE_ADMIN.createTable(tableDescriptor);
         
-        recordTable = new HTable(HBASE_TEST_UTILITY.getConfiguration(), TEST_TABLE_NAME);
+        recordTable = HBASE_ADMIN.getConnection().getTable(TableName.valueOf(TEST_TABLE_NAME));
         
         opts = new HBaseIndexingOptions(new Configuration());
         opts.zkHost = SOLR_TEST_UTILITY.getZkConnectString();
@@ -131,10 +116,10 @@ public class IndexerDryRunTest {
     }
     
     @After
-    public void tearDown() throws IOException, SolrServerException {
+    public void tearDown() throws IOException {
         recordTable.close();
-        HBASE_ADMIN.disableTable(TEST_TABLE_NAME);
-        HBASE_ADMIN.deleteTable(TEST_TABLE_NAME);
+        HBASE_ADMIN.disableTable(TableName.valueOf(TEST_TABLE_NAME));
+        HBASE_ADMIN.deleteTable(TableName.valueOf(TEST_TABLE_NAME));
     }
     
     /**
@@ -149,7 +134,7 @@ public class IndexerDryRunTest {
     private void writeHBaseRecord(String row, Map<String,String> qualifiersAndValues) throws IOException {
         Put put = new Put(Bytes.toBytes(row));
         for (Entry<String, String> entry : qualifiersAndValues.entrySet()) {
-            put.add(TEST_COLFAM_NAME, Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
+            put.addColumn(TEST_COLFAM_NAME, Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
         }
         recordTable.put(put);
     }

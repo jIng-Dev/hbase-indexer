@@ -31,6 +31,8 @@ import com.ngdata.hbaseindexer.conf.IndexerConfBuilder;
 import com.ngdata.hbaseindexer.indexer.Indexer.ColumnBasedIndexer;
 import com.ngdata.hbaseindexer.parse.ResultToSolrMapper;
 import com.ngdata.sep.SepEvent;
+
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.solr.common.SolrInputDocument;
@@ -56,7 +58,7 @@ public class ColumnBasedIndexerTest {
         indexer = new ColumnBasedIndexer("column-based", indexerConf, TABLE_NAME, mapper, null, solrWriter);
     }
 
-    private RowData createEventRowData(String row, KeyValue... keyValues) {
+    private RowData createEventRowData(String row, Cell... keyValues) {
         return new SepEventRowData(
                 new SepEvent(TABLE_NAME.getBytes(),
                         row.getBytes(), Lists.newArrayList(keyValues), null));

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,7 +58,7 @@ public class HBaseEventPublisherTest {
         
         assertArrayEquals(eventRow, put.getRow());
         assertEquals(1, put.size());
-        assertArrayEquals(eventPayload, put.get(PAYLOAD_CF, PAYLOAD_CQ).get(0).getValue());
+        assertArrayEquals(eventPayload, CellUtil.cloneValue(put.get(PAYLOAD_CF, PAYLOAD_CQ).get(0)));
     }
 
 }

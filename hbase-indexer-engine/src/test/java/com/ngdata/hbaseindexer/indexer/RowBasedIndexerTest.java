@@ -32,9 +32,12 @@ import com.ngdata.hbaseindexer.conf.IndexerConfBuilder;
 import com.ngdata.hbaseindexer.indexer.Indexer.RowBasedIndexer;
 import com.ngdata.hbaseindexer.parse.ResultToSolrMapper;
 import com.ngdata.sep.SepEvent;
+
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.common.SolrInputDocument;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +47,7 @@ public class RowBasedIndexerTest {
     private static final String TABLE_NAME = "TABLE_A";
     
     private IndexerConf indexerConf;
-    private HTablePool tablePool;
+    private Connection tablePool;
     private SolrInputDocumentWriter solrWriter;
     private SolrUpdateCollector updateCollector;
     private RowBasedIndexer indexer;
@@ -55,7 +58,7 @@ public class RowBasedIndexerTest {
         indexerConf = spy(new IndexerConfBuilder().table(TABLE_NAME).mappingType(MappingType.ROW).build());
         ResultToSolrMapper mapper = IndexingEventListenerTest.createHbaseToSolrMapper(true);
         
-        tablePool = mock(HTablePool.class);
+        tablePool = mock(Connection.class);
         solrWriter = mock(DirectSolrInputDocumentWriter.class);
         
         updateCollector = new SolrUpdateCollector(10);
@@ -63,16 +66,17 @@ public class RowBasedIndexerTest {
         indexer = new RowBasedIndexer("row-based", indexerConf, TABLE_NAME, mapper, tablePool, null, solrWriter);
     }
     
-    private RowData createEventRowData(String row, KeyValue... keyValues) {
+    private RowData createEventRowData(String row, Cell... keyValues) {
         return new SepEventRowData(
-                new SepEvent(TABLE_NAME.getBytes(),
-                        row.getBytes(), Lists.newArrayList(keyValues), null));
+                new SepEvent(Bytes.toBytes(TABLE_NAME),
+                       Bytes.toBytes(row), Lists.newArrayList(keyValues), null));
     }
 
     @Test
     public void testCalculateIndexUpdates_AddDocument() throws IOException {
         
-        KeyValue keyValue = new KeyValue("_row_".getBytes(), "_cf_".getBytes(), "_qual_".getBytes(), "value".getBytes());
+        KeyValue keyValue = new KeyValue(Bytes.toBytes("_row_"), Bytes.toBytes("_cf_"),
+                                         Bytes.toBytes("_qual_"), Bytes.toBytes("value"));
         RowData rowData = createEventRowData("_row_", keyValue);
         indexer.calculateIndexUpdates(ImmutableList.of(rowData), updateCollector);
         
@@ -86,7 +90,9 @@ public class RowBasedIndexerTest {
         
         doReturn("custom-table-name").when(indexerConf).getTableNameField();
         
-        KeyValue keyValue = new KeyValue("_row_".getBytes(), "_cf_".getBytes(), "_qual_".getBytes(), "value".getBytes());
+        KeyValue keyValue = new KeyValue(Bytes.toBytes("_row_"), Bytes.toBytes("_cf_"),
+                                         Bytes.toBytes("_qual_"),
+                                         Bytes.toBytes("value"));
         RowData rowData = createEventRowData("_row_", keyValue);
         indexer.calculateIndexUpdates(ImmutableList.of(rowData), updateCollector);
         
@@ -98,7 +104,10 @@ public class RowBasedIndexerTest {
     @Test
     public void testCalculateIndexUpdates_DeleteCell() throws IOException {
         
-        KeyValue keyValue = new KeyValue("_row_".getBytes(), "_cf_".getBytes(), "_qual_".getBytes(), 0L, Type.DeleteColumn);
+        KeyValue keyValue = new KeyValue(Bytes.toBytes("_row_"), Bytes.toBytes("_cf_"),
+                                         Bytes.toBytes("_qual_"),
+                                         0L,
+                                         Type.DeleteColumn);
         RowData rowData = createEventRowData("_row_", keyValue);
         indexer.calculateIndexUpdates(ImmutableList.of(rowData), updateCollector);
         
@@ -109,7 +118,8 @@ public class RowBasedIndexerTest {
     @Test
     public void testCalculateIndexUpdates_DeleteRow() throws IOException {
         
-        KeyValue keyValue = new KeyValue("_row_".getBytes(), "".getBytes(), "".getBytes(), 0L, Type.Delete);
+        KeyValue keyValue = new KeyValue(Bytes.toBytes("_row_"), Bytes.toBytes(""), Bytes.toBytes(""), 0L,
+                                         Type.Delete);
         RowData rowData = createEventRowData("_row_", keyValue);
         indexer.calculateIndexUpdates(ImmutableList.of(rowData), updateCollector);
         
@@ -119,8 +129,13 @@ public class RowBasedIndexerTest {
     
     @Test
     public void testCalculateIndexUpdates_UpdateAndDeleteCombinedForSameCell_DeleteFirst() throws IOException {
-        KeyValue toDelete = new KeyValue("_row_".getBytes(), "_cf_".getBytes(), "_qual_".getBytes(), 0L, Type.Delete);
-        KeyValue toAdd = new KeyValue("_row_".getBytes(), "_cf_".getBytes(), "_qual_".getBytes(), "value".getBytes());
+        KeyValue toDelete = new KeyValue(Bytes.toBytes("_row_"), Bytes.toBytes("_cf_"),
+                                         Bytes.toBytes("_qual_"),
+                                         0L,
+                                         Type.Delete);
+        KeyValue toAdd = new KeyValue(Bytes.toBytes("_row_"), Bytes.toBytes("_cf_"),
+                                      Bytes.toBytes("_qual_"),
+                                      Bytes.toBytes("value"));
         RowData deleteEventRowData = createEventRowData("_row_", toDelete);
         RowData addEventRowData = createEventRowData("_row_", toAdd);
 
@@ -134,8 +149,13 @@ public class RowBasedIndexerTest {
 
     @Test
     public void testCalculateIndexUpdates_UpdateAndDeleteCombinedForSameCell_UpdateFirst() throws IOException {
-        KeyValue toAdd = new KeyValue("_row_".getBytes(), "_cf_".getBytes(), "_qual_".getBytes(), "value".getBytes());
-        KeyValue toDelete = new KeyValue("_row_".getBytes(), "_cf_".getBytes(), "_qual_".getBytes(), 0L, Type.Delete);
+        KeyValue toAdd = new KeyValue(Bytes.toBytes("_row_"), Bytes.toBytes("_cf_"),
+                                      Bytes.toBytes("_qual_"),
+                                      Bytes.toBytes("value"));
+        KeyValue toDelete = new KeyValue(Bytes.toBytes("_row_"), Bytes.toBytes("_cf_"),
+                                         Bytes.toBytes("_qual_"),
+                                         0L,
+                                         Type.Delete);
         RowData addEventRowData = createEventRowData("_row_", toAdd);
         RowData deleteEventRowData = createEventRowData("_row_", toDelete);
 

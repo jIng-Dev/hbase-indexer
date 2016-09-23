@@ -35,10 +35,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -81,6 +84,7 @@ public class IndexerIT {
     private static SolrTestingUtility solrTestingUtility;
     private static CloudSolrClient collection1;
     private static CloudSolrClient collection2;
+    private static Connection connection;
 
     private Main main;
     private int oldMasterEventCount;
@@ -98,7 +102,10 @@ public class IndexerIT {
         // We'll use the same conf object for hbase master/rs, hbase-indexer, and hbase client
         conf = HBaseIndexerConfiguration.create();
         // The following are the standard settings that for hbase regionserver when using the SEP (see SEP docs)
-        conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+        
+        // HACK disabled because always on in hbase-2 (see HBASE-16040)
+        // conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+        
         conf.setLong("replication.source.sleepforretries", 50);
 //        conf.set("replication.replicationsource.implementation", SepReplicationSource.class.getName());
         conf.setInt("hbase.master.info.port", -1);
@@ -120,11 +127,13 @@ public class IndexerIT {
         solrTestingUtility.createCore("collection1_core1", "collection1", "config1", 1);
         solrTestingUtility.createCore("collection2_core1", "collection2", "config1", 1);
 
-        collection1 = new CloudSolrClient(solrTestingUtility.getZkConnectString());
+        collection1 = new CloudSolrClient.Builder().withZkHost(solrTestingUtility.getZkConnectString()).build();
         collection1.setDefaultCollection("collection1");
 
-        collection2 = new CloudSolrClient(solrTestingUtility.getZkConnectString());
+        collection2 = new CloudSolrClient.Builder().withZkHost(solrTestingUtility.getZkConnectString()).build();
         collection2.setDefaultCollection("collection2");
+        
+        connection = ConnectionFactory.createConnection(conf);
     }
 
     @AfterClass
@@ -144,6 +153,10 @@ public class IndexerIT {
         if (hbaseTestUtil != null) {
             hbaseTestUtil.shutdownMiniCluster();
         }
+        
+        if (connection != null) {
+            connection.close();
+        }
     }
 
     @Before
@@ -155,17 +168,17 @@ public class IndexerIT {
 
             // Delete all hbase tables
             System.out.println(">>> Deleting all HBase tables");
-            HBaseAdmin admin = new HBaseAdmin(conf);
+            Admin admin = connection.getAdmin();
             for (HTableDescriptor table : admin.listTables()) {
-                admin.disableTable(table.getName());
-                admin.deleteTable(table.getName());
+                admin.disableTable(table.getTableName());
+                admin.deleteTable(table.getTableName());
             }
             admin.close();
 
             // Delete all replication peers
             System.out.println(">>> Deleting all replication peers from HBase");
             ReplicationAdmin replAdmin = new ReplicationAdmin(conf);
-            for (String peerId : replAdmin.listPeers().keySet()) {
+            for (String peerId : replAdmin.listPeerConfigs().keySet()) {
                 replAdmin.removePeer(peerId);
             }
             replAdmin.close();
@@ -211,9 +224,9 @@ public class IndexerIT {
         indexerModel.addIndexer(indexerDef);
 
         // Ingest
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
         Put put = new Put(b("row1"));
-        put.add(b("family1"), b("qualifier1"), b("value1"));
+        put.addColumn(b("family1"), b("qualifier1"), b("value1"));
         table.put(put);
 
         // Commit Solr index and check data is present
@@ -249,9 +262,9 @@ public class IndexerIT {
         indexerModel.addIndexer(indexerDef);
 
         // Ingest
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
         Put put = new Put(b("row1"));
-        put.add(b("family1"), b("qualifier1"), b("value1"));
+        put.addColumn(b("family1"), b("qualifier1"), b("value1"));
         table.put(put);
 
         // Commit Solr index and check data is present
@@ -284,14 +297,14 @@ public class IndexerIT {
 
         indexerModel.addIndexer(indexerDef);
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
         Put put = new Put(b("row1"));
-        put.add(b("family1"), b("qualifier1"), b("value1"));
+        put.addColumn(b("family1"), b("qualifier1"), b("value1"));
         table.put(put);
 
         // Also put a value which should not be processed by the current config
         put = new Put(b("row2"));
-        put.add(b("family1"), b("qualifier2"), b("value1"));
+        put.addColumn(b("family1"), b("qualifier2"), b("value1"));
         table.put(put);
 
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
@@ -319,7 +332,7 @@ public class IndexerIT {
         waitOnEventsProcessed(1);
 
         put = new Put(b("row3"));
-        put.add(b("family1"), b("qualifier2"), b("value1"));
+        put.addColumn(b("family1"), b("qualifier2"), b("value1"));
         table.put(put);
 
         Waiter.waitFor(new Callable<Boolean>() {
@@ -367,15 +380,15 @@ public class IndexerIT {
 
         indexerModel.addIndexer(indexerDef);
 
-        HTable table1 = new HTable(conf, "table1");
-        HTable table2 = new HTable(conf, "table2");
+        Table table1 = connection.getTable(TableName.valueOf("table1"));
+        Table table2 = connection.getTable(TableName.valueOf("table2"));
 
         Put put = new Put(b("row1"));
-        put.add(b("family1"), b("qualifier1"), b("value1"));
+        put.addColumn(b("family1"), b("qualifier1"), b("value1"));
         table1.put(put);
 
         put = new Put(b("row2"));
-        put.add(b("family1"), b("qualifier1"), b("value1"));
+        put.addColumn(b("family1"), b("qualifier1"), b("value1"));
         table2.put(put);
 
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
@@ -584,11 +597,11 @@ public class IndexerIT {
     public void testSubscriptionTimestamp() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         for (int i = 0; i < 10; i++) {
             Put put = new Put(b("row" + i));
-            put.add(b("family1"), b("qualifier1"), b("value1"));
+            put.addColumn(b("family1"), b("qualifier1"), b("value1"));
             table.put(put);
         }
 
@@ -623,7 +636,7 @@ public class IndexerIT {
         // But newly added rows should be indexed
         for (int i = 0; i < 10; i++) {
             Put put = new Put(b("row_b_" + i));
-            put.add(b("family1"), b("qualifier1"), b("value1"));
+            put.addColumn(b("family1"), b("qualifier1"), b("value1"));
             table.put(put);
         }
 
@@ -642,7 +655,7 @@ public class IndexerIT {
     public void testCustomKeyFormatter() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1'");
@@ -655,7 +668,7 @@ public class IndexerIT {
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
         Put put = new Put(new byte[]{0, 0, 0, 0});
-        put.add(b("family1"), b("field1"), b("value1"));
+        put.addColumn(b("family1"), b("field1"), b("value1"));
         table.put(put);
 
         Waiter.waitFor(new Callable<Boolean>() {
@@ -679,7 +692,7 @@ public class IndexerIT {
     public void testDefaultKeyFormatter() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1'>");
@@ -691,7 +704,7 @@ public class IndexerIT {
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
         Put put = new Put(b("row1"));
-        put.add(b("family1"), b("field1"), b("value1"));
+        put.addColumn(b("family1"), b("field1"), b("value1"));
         table.put(put);
 
         Waiter.waitFor(new Callable<Boolean>() {
@@ -715,7 +728,7 @@ public class IndexerIT {
     public void testSomeDataTypesIncludingCustomValueMapper() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1'>");
@@ -731,9 +744,9 @@ public class IndexerIT {
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
         Put put = new Put(Bytes.toBytes("cry baby"));
-        put.add(b("family1"), b("field1"), b("value1"));
-        put.add(b("family1"), b("field2"), Bytes.toBytes(836));
-        put.add(b("family1"), b("field3"), b("blue,green,black,orange"));
+        put.addColumn(b("family1"), b("field1"), b("value1"));
+        put.addColumn(b("family1"), b("field2"), Bytes.toBytes(836));
+        put.addColumn(b("family1"), b("field3"), b("blue,green,black,orange"));
         table.put(put);
 
         Waiter.waitFor(new Callable<Boolean>() {
@@ -760,7 +773,7 @@ public class IndexerIT {
     public void testMorphline() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1' mapper='" + MorphlineResultToSolrMapper.class.getName() + "'>");
@@ -773,7 +786,7 @@ public class IndexerIT {
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
         Put put = new Put(Bytes.toBytes("cry baby"));
-        put.add(b("family1"), b("field1"), Bytes.toBytes(4279));
+        put.addColumn(b("family1"), b("field1"), Bytes.toBytes(4279));
         table.put(put);
 
         Waiter.waitFor(new Callable<Boolean>() {
@@ -796,7 +809,7 @@ public class IndexerIT {
     public void testMorphlineWithWildcardInputFieldMix() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1' mapper='" + MorphlineResultToSolrMapper.class.getName() + "'>");
@@ -809,8 +822,8 @@ public class IndexerIT {
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
         Put put = new Put(Bytes.toBytes("cry baby"));
-        put.add(b("family1"), b("field1"), Bytes.toBytes(4279));
-        put.add(b("family1"), b("field0"), Bytes.toBytes(1234));
+        put.addColumn(b("family1"), b("field1"), Bytes.toBytes(4279));
+        put.addColumn(b("family1"), b("field0"), Bytes.toBytes(1234));
         table.put(put);
 
         Waiter.waitFor(new Callable<Boolean>() {
@@ -834,7 +847,7 @@ public class IndexerIT {
     public void testColumnMappingAndRowAndFamilySolrFields() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1'");
@@ -852,17 +865,17 @@ public class IndexerIT {
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
 
         Put put = new Put(Bytes.toBytes("the row"));
-        put.add(b("family1"), b("col1"), b("value1"));
+        put.addColumn(b("family1"), b("col1"), b("value1"));
         table.put(put);
 
         put = new Put(Bytes.toBytes("the row"));
-        put.add(b("family1"), b("col2"), b("value2"));
+        put.addColumn(b("family1"), b("col2"), b("value2"));
         table.put(put);
 
         // 2 columns added in one call should still be mapped individually
         put = new Put(Bytes.toBytes("the row"));
-        put.add(b("family1"), b("col3"), b("value3"));
-        put.add(b("family1"), b("col4"), b("value4"));
+        put.addColumn(b("family1"), b("col3"), b("value3"));
+        put.addColumn(b("family1"), b("col4"), b("value4"));
         table.put(put);
 
         Waiter.waitFor(new Callable<Boolean>() {
@@ -898,8 +911,8 @@ public class IndexerIT {
         main.getIndexerMaster().registerLifecycleListener(indexerLifecycleListener);
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
-
+        connection.getTable(TableName.valueOf("table1"));
+        
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1'>");
         indexerConf.append("  <field name='field1_s' value='family1:field1' type='string'/>");
@@ -960,7 +973,7 @@ public class IndexerIT {
     public void testMixedIrrelevantAndRelevantUpdates() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1'>");
@@ -975,14 +988,14 @@ public class IndexerIT {
 
         // First do a row update whereby we only set irrelevant fields (fields that do not need to be indexed)
         Put put = new Put(rowkey);
-        put.add(b("family1"), b("irrelevant_field"), b("value1"));
+        put.addColumn(b("family1"), b("irrelevant_field"), b("value1"));
         table.put(put);
 
         // Then update same row and set a field that does need to be indexed
         // (It is not per se important that it is the same row, but since the SEP splits events over
         // multiple threads, partitioned on row key, it is easiest to just do an update on the same row)
         put = new Put(rowkey);
-        put.add(b("family1"), b("field1"), b("value1"));
+        put.addColumn(b("family1"), b("field1"), b("value1"));
         table.put(put);
 
         Waiter.waitFor(new Callable<Boolean>() {
@@ -1011,7 +1024,7 @@ public class IndexerIT {
     public void testManyMixedIrrelevantAndRelevantUpdates() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1'>");
@@ -1026,9 +1039,9 @@ public class IndexerIT {
         List<Put> puts = Lists.newArrayList();
         for (int i = 0; i < 100; i++) {
             Put put = new Put(Bytes.toBytes(String.valueOf(i)));
-            put.add(b("family1"), b("irrelevant_field"), b("value1"));
+            put.addColumn(b("family1"), b("irrelevant_field"), b("value1"));
             if (Math.random() >= 0.5d) {
-                put.add(b("family1"), b("field1"), b("value1"));
+                put.addColumn(b("family1"), b("field1"), b("value1"));
                 expectedRows++;
             }
             puts.add(put);
@@ -1059,7 +1072,7 @@ public class IndexerIT {
     public void testMixedIrrelevantAndRelevantUpdatesInSameMultiput() throws Exception {
         createTable("table1", "family1");
 
-        HTable table = new HTable(conf, "table1");
+        Table table = connection.getTable(TableName.valueOf("table1"));
 
         StringBuilder indexerConf = new StringBuilder();
         indexerConf.append("<indexer table='table1'>");
@@ -1074,11 +1087,11 @@ public class IndexerIT {
 
         List<Put> puts = Lists.newArrayList();
         Put put = new Put(rowkey);
-        put.add(b("family1"), b("irrelevant_field"), b("value1"));
+        put.addColumn(b("family1"), b("irrelevant_field"), b("value1"));
         puts.add(put);
 
         put = new Put(rowkey);
-        put.add(b("family1"), b("field1"), b("value1"));
+        put.addColumn(b("family1"), b("field1"), b("value1"));
         puts.add(put);
 
         table.put(puts);
@@ -1183,12 +1196,12 @@ public class IndexerIT {
      * Creates a table wit one family, with replication enabled.
      */
     private void createTable(String tableName, String familyName) throws Exception {
-        HTableDescriptor tableDescriptor = new HTableDescriptor(tableName);
+        HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableName));
         HColumnDescriptor familyDescriptor = new HColumnDescriptor(familyName);
         familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
         tableDescriptor.addFamily(familyDescriptor);
 
-        HBaseAdmin hbaseAdmin = new HBaseAdmin(conf);
+        Admin hbaseAdmin = connection.getAdmin();
         hbaseAdmin.createTable(tableDescriptor);
         hbaseAdmin.close();
     }

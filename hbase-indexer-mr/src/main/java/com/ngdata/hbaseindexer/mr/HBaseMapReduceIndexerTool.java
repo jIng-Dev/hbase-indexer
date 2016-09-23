@@ -24,7 +24,6 @@ import com.ngdata.hbaseindexer.conf.IndexerComponentFactory;
 import com.ngdata.hbaseindexer.conf.IndexerComponentFactoryUtil;
 import com.ngdata.hbaseindexer.conf.IndexerConf;
 import com.ngdata.hbaseindexer.morphline.MorphlineResultToSolrMapper;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -288,14 +287,14 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
 			   throw new RuntimeException(e);
 			}
         }
-    }
+    } 
 
     private Set<SolrServer> createSolrServers(Map<String, String> indexConnectionParams, String uniqueKeyField) throws MalformedURLException {
         String solrMode = getSolrMode(indexConnectionParams);
         if (solrMode.equals("cloud")) {
             String indexZkHost = indexConnectionParams.get(SolrConnectionParams.ZOOKEEPER);
             String collectionName = indexConnectionParams.get(SolrConnectionParams.COLLECTION);
-            CloudSolrClient solrServer = new CloudSolrClient(indexZkHost);
+            CloudSolrClient solrServer = new CloudSolrClient.Builder().withZkHost(indexZkHost).build();
             int zkSessionTimeout = HBaseIndexerConfiguration.getSessionTimeout(getConf());
             solrServer.setZkClientTimeout(zkSessionTimeout);
             solrServer.setZkConnectTimeout(zkSessionTimeout);

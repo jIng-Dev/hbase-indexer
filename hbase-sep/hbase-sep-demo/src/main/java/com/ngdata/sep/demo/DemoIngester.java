@@ -17,8 +17,10 @@ package com.ngdata.sep.demo;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -54,7 +56,7 @@ public class DemoIngester {
 
         ObjectMapper jsonMapper = new ObjectMapper();
 
-        HTable htable = new HTable(conf, "sep-user-demo");
+        Table htable = ConnectionFactory.createConnection(conf).getTable(TableName.valueOf("sep-user-demo"));
 
         while (true) {
             byte[] rowkey = Bytes.toBytes(UUID.randomUUID().toString());
@@ -64,13 +66,13 @@ public class DemoIngester {
             String email = name.toLowerCase() + "@" + pickDomain();
             String age = String.valueOf((int) Math.ceil(Math.random() * 100));
 
-            put.add(infoCf, nameCq, Bytes.toBytes(name));
-            put.add(infoCf, emailCq, Bytes.toBytes(email));
-            put.add(infoCf, ageCq, Bytes.toBytes(age));
+            put.addColumn(infoCf, nameCq, Bytes.toBytes(name));
+            put.addColumn(infoCf, emailCq, Bytes.toBytes(email));
+            put.addColumn(infoCf, ageCq, Bytes.toBytes(age));
 
             MyPayload payload = new MyPayload();
             payload.setPartialUpdate(false);
-            put.add(infoCf, payloadCq, jsonMapper.writeValueAsBytes(payload));
+            put.addColumn(infoCf, payloadCq, jsonMapper.writeValueAsBytes(payload));
 
             htable.put(put);
             System.out.println("Added row " + Bytes.toString(rowkey));

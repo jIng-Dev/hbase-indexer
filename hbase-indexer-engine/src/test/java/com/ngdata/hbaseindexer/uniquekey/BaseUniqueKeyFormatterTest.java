@@ -17,6 +17,7 @@ package com.ngdata.hbaseindexer.uniquekey;
 
 import static org.junit.Assert.assertArrayEquals;
 
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -43,9 +44,10 @@ public abstract class BaseUniqueKeyFormatterTest {
         UniqueKeyFormatter formatter = createFormatter();
         String formatted = formatter.formatKeyValue(keyValue);
         KeyValue unformatted = formatter.unformatKeyValue(formatted);
-        assertArrayEquals(keyValue.getRow(), unformatted.getRow());
-        assertArrayEquals(keyValue.getFamily(), unformatted.getFamily());
-        assertArrayEquals(keyValue.getQualifier(), unformatted.getQualifier());
+        assertArrayEquals(CellUtil.cloneRow(keyValue), CellUtil.cloneRow(unformatted));
+        assertArrayEquals(CellUtil.cloneFamily(keyValue), CellUtil.cloneFamily(unformatted));
+        assertArrayEquals(CellUtil.cloneQualifier(keyValue), CellUtil.cloneQualifier(unformatted));
+        assertArrayEquals(CellUtil.cloneValue(keyValue), CellUtil.cloneValue(unformatted));
     }
 
     @Test(expected = NullPointerException.class)

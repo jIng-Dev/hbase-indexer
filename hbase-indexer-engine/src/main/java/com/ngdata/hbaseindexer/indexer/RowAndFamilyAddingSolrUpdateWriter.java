@@ -17,6 +17,8 @@ package com.ngdata.hbaseindexer.indexer;
 
 import com.ngdata.hbaseindexer.parse.SolrUpdateWriter;
 import com.ngdata.hbaseindexer.uniquekey.UniqueKeyFormatter;
+
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.solr.common.SolrInputDocument;
 
@@ -54,11 +56,11 @@ public class RowAndFamilyAddingSolrUpdateWriter implements SolrUpdateWriter {
     @Override
     public void add(SolrInputDocument solrDocument) {
         if (rowField != null) {
-            solrDocument.addField(rowField, uniqueKeyFormatter.formatRow(keyValue.getRow()));
+            solrDocument.addField(rowField, uniqueKeyFormatter.formatRow(CellUtil.cloneRow(keyValue)));
         }
         
         if (columnFamilyField != null) {
-            solrDocument.addField(columnFamilyField, uniqueKeyFormatter.formatFamily(keyValue.getFamily()));
+            solrDocument.addField(columnFamilyField, uniqueKeyFormatter.formatFamily(CellUtil.cloneFamily(keyValue)));
         }
         
         delegateUpdateWriter.add(solrDocument);

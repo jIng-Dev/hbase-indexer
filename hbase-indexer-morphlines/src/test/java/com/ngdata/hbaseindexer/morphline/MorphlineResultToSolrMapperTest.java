@@ -72,9 +72,9 @@ public class MorphlineResultToSolrMapperTest {
             MorphlineResultToSolrMapper.MORPHLINE_FILE_PARAM, "src/test/resources/test-morphlines/extractHBaseCells.conf")
             );
 
-        KeyValue kvA = new KeyValue(ROW, COLUMN_FAMILY_A, QUALIFIER_A, Bytes.toBytes(42));
-        KeyValue kvB = new KeyValue(ROW, COLUMN_FAMILY_B, QUALIFIER_B, "dummy value".getBytes("UTF-8"));
-        Result result = Result.create(Lists.<Cell>newArrayList(kvA, kvB));
+        Cell kvA = new KeyValue(ROW, COLUMN_FAMILY_A, QUALIFIER_A, Bytes.toBytes(42));
+        Cell kvB = new KeyValue(ROW, COLUMN_FAMILY_B, QUALIFIER_B, "dummy value".getBytes("UTF-8"));
+        Result result = Result.create(Lists.newArrayList(kvA, kvB));
 
         Multimap expectedMap = ImmutableMultimap.of("fieldA", 42, "fieldB", "dummy value");
 
@@ -95,7 +95,7 @@ public class MorphlineResultToSolrMapperTest {
         KeyValue kvX = new KeyValue(ROW, COLUMN_FAMILY_B, QUALIFIER_A, "Basti".getBytes("UTF-8"));
         KeyValue kvB = new KeyValue(ROW, COLUMN_FAMILY_B, QUALIFIER_B, "dummy value".getBytes("UTF-8"));
         KeyValue kvC = new KeyValue(ROW, COLUMN_FAMILY_B, QUALIFIER_C, "Nadja".getBytes("UTF-8"));
-        Result result = new Result(Lists.newArrayList(kvA, kvX, kvB, kvC));
+        Result result = Result.create(new Cell[] {kvA, kvX, kvB, kvC});
 
         Multimap expectedMap = ImmutableMultimap.of("fieldA", 42, "fieldB", "Basti", "fieldC", "Nadja");
 
@@ -116,7 +116,7 @@ public class MorphlineResultToSolrMapperTest {
         KeyValue kvA = new KeyValue(ROW, COLUMN_FAMILY_A, QUALIFIER_A, Bytes.toBytes(42));
         KeyValue kvB = new KeyValue(ROW, COLUMN_FAMILY_B, QUALIFIER_B, "dummy value".getBytes("UTF-8"));
         KeyValue kvC = new KeyValue(ROW, COLUMN_FAMILY_B, QUALIFIER_A, "Nadja".getBytes("UTF-8"));
-        Result result = new Result(Lists.newArrayList(kvA, kvB, kvC));
+        Result result = Result.create(new Cell[] {kvA, kvB, kvC});
 
         Multimap expectedMap = ImmutableMultimap.of("fieldA", 42, "prefixB", "dummy value", "prefixA", "Nadja");
 
@@ -199,7 +199,7 @@ public class MorphlineResultToSolrMapperTest {
   
         MorphlineResultToSolrMapper resultMapper = createMorphlineMapper(fieldDef);
 
-        Result result = Result.create(Lists.<Cell>newArrayList(new KeyValue(ROW, COLUMN_FAMILY_A, QUALIFIER_A, Bytes.toBytes("value"))));
+        Result result = Result.create(Lists.newArrayList((Cell)new KeyValue(ROW, COLUMN_FAMILY_A, QUALIFIER_A, Bytes.toBytes("value"))));
         
         assertTrue(resultMapper.containsRequiredData(result));
     }
@@ -211,7 +211,7 @@ public class MorphlineResultToSolrMapperTest {
         
         MorphlineResultToSolrMapper resultMapper = createMorphlineMapper(fieldDef);
 
-        Result result = Result.create(Lists.<Cell>newArrayList(new KeyValue(ROW, COLUMN_FAMILY_A, QUALIFIER_A, Bytes.toBytes("value"))));
+        Result result = Result.create(Lists.newArrayList((Cell)new KeyValue(ROW, COLUMN_FAMILY_A, QUALIFIER_A, Bytes.toBytes("value"))));
         
         assertFalse(resultMapper.containsRequiredData(result));
     }

@@ -15,7 +15,6 @@
  */
 package com.ngdata.hbaseindexer.mr;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -36,9 +35,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -75,12 +76,12 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     
     private static CloudSolrClient COLLECTION1;
     private static CloudSolrClient COLLECTION2;
-    private static HBaseAdmin HBASE_ADMIN;
+    private static Admin HBASE_ADMIN;
     private static String SOLR_ZK;
     private static String INDEXER_ZK;
     private static IndexerModelImpl INDEXER_MODEL;
 
-    private HTable recordTable;
+    private Table recordTable;
     
     private Configuration indexerToolConf;
     
@@ -107,10 +108,10 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
         SOLR_TEST_UTILITY.createCore("collection1_core1", "collection1", "config1", 1);
         SOLR_TEST_UTILITY.createCore("collection2_core1", "collection2", "config1", 1);
 
-        COLLECTION1 = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());
+        COLLECTION1 = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();
         COLLECTION1.setDefaultCollection("collection1");
 
-        COLLECTION2 = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());
+        COLLECTION2 = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();
         COLLECTION2.setDefaultCollection("collection2");
         
         SOLR_ZK = "127.0.0.1:" + zkClientPort + "/solr";
@@ -131,7 +132,7 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
         
         Closer.close(zkItf);
         
-        HBASE_ADMIN = new HBaseAdmin(HBASE_TEST_UTILITY.getConfiguration());
+        HBASE_ADMIN = ConnectionFactory.createConnection(HBASE_TEST_UTILITY.getConfiguration()).getAdmin();
         
     }
     
@@ -139,6 +140,7 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     public static void tearDownClass() throws Exception {
         SOLR_TEST_UTILITY.stop();
         HBASE_ADMIN.close();
+        HBASE_ADMIN.getConnection().close();
         HBASE_TEST_UTILITY.shutdownMiniMapReduceCluster();
         HBASE_TEST_UTILITY.shutdownMiniCluster();
         MR_TEST_UTIL.tearDownSolrEnvironment();
@@ -147,14 +149,14 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     @Before
     public void setUp() throws Exception {
         createHTable(TEST_TABLE_NAME);
-        recordTable = new HTable(HBASE_TEST_UTILITY.getConfiguration(), TEST_TABLE_NAME);
+        recordTable = HBASE_ADMIN.getConnection().getTable(TableName.valueOf(TEST_TABLE_NAME));
         indexerToolConf = HBASE_TEST_UTILITY.getConfiguration();
     }
     
     @After
     public void tearDown() throws IOException, SolrServerException {
-        HBASE_ADMIN.disableTable(TEST_TABLE_NAME);
-        HBASE_ADMIN.deleteTable(TEST_TABLE_NAME);
+        HBASE_ADMIN.disableTable(TableName.valueOf(TEST_TABLE_NAME));
+        HBASE_ADMIN.deleteTable(TableName.valueOf(TEST_TABLE_NAME));
         
         recordTable.close();
         
@@ -206,10 +208,10 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
      * @param qualifiersAndValues map of column qualifiers to cell values
      * @param table htable to write to
      */
-     private static void writeHBaseRecord(String row, Map<String,String> qualifiersAndValues, HTable table) throws IOException {
+     private static void writeHBaseRecord(String row, Map<String,String> qualifiersAndValues, Table table) throws IOException {
         Put put = new Put(Bytes.toBytes(row));
         for (Entry<String, String> entry : qualifiersAndValues.entrySet()) {
-            put.add(TEST_COLFAM_NAME, Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
+            put.addColumn(TEST_COLFAM_NAME, Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
         }
         table.put(put);
      }
@@ -427,13 +429,13 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     @Test
     public void testIndexer_StartTimeDefined() throws Exception {
         Put putEarly = new Put(Bytes.toBytes("early"));
-        putEarly.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 1L, Bytes.toBytes("Early"));
+        putEarly.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 1L, Bytes.toBytes("Early"));
         
         Put putOntime = new Put(Bytes.toBytes("ontime"));
-        putOntime.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 2L, Bytes.toBytes("Ontime"));
+        putOntime.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 2L, Bytes.toBytes("Ontime"));
 
         Put putLate = new Put(Bytes.toBytes("late"));
-        putLate.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 3L, Bytes.toBytes("Late"));
+        putLate.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 3L, Bytes.toBytes("Late"));
         
         recordTable.put(ImmutableList.of(putEarly, putOntime, putLate));
         
@@ -451,13 +453,13 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     @Test
     public void testIndexer_EndTimeDefined() throws Exception {
         Put putEarly = new Put(Bytes.toBytes("early"));
-        putEarly.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 1L, Bytes.toBytes("Early"));
+        putEarly.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 1L, Bytes.toBytes("Early"));
         
         Put putOntime = new Put(Bytes.toBytes("ontime"));
-        putOntime.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 2L, Bytes.toBytes("Ontime"));
+        putOntime.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 2L, Bytes.toBytes("Ontime"));
 
         Put putLate = new Put(Bytes.toBytes("late"));
-        putLate.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 3L, Bytes.toBytes("Late"));
+        putLate.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 3L, Bytes.toBytes("Late"));
         
         recordTable.put(ImmutableList.of(putEarly, putOntime, putLate));
         
@@ -475,13 +477,13 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     @Test
     public void testIndexer_StartAndEndTimeDefined() throws Exception {
         Put putEarly = new Put(Bytes.toBytes("early"));
-        putEarly.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 1L, Bytes.toBytes("Early"));
+        putEarly.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 1L, Bytes.toBytes("Early"));
         
         Put putOntime = new Put(Bytes.toBytes("ontime"));
-        putOntime.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 2L, Bytes.toBytes("Ontime"));
+        putOntime.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 2L, Bytes.toBytes("Ontime"));
 
         Put putLate = new Put(Bytes.toBytes("late"));
-        putLate.add(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 3L, Bytes.toBytes("Late"));
+        putLate.addColumn(TEST_COLFAM_NAME, Bytes.toBytes("firstname"), 3L, Bytes.toBytes("Late"));
         
         recordTable.put(ImmutableList.of(putEarly, putOntime, putLate));
 
@@ -502,10 +504,10 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     @Test
     public void testIndexer_Multitable() throws Exception {
         String tablePrefix = "_multitable_";
-        HTableDescriptor descriptorA = createHTable((tablePrefix + "a_").getBytes(Charsets.UTF_8));
-        HTableDescriptor descriptorB = createHTable((tablePrefix + "b_").getBytes(Charsets.UTF_8));
-        HTable recordTable2 = new HTable(HBASE_TEST_UTILITY.getConfiguration(), tablePrefix + "a_");
-        HTable recordTable3 =  new HTable(HBASE_TEST_UTILITY.getConfiguration(), tablePrefix + "b_");
+        createHTable(Bytes.toBytes(tablePrefix + "a_"));
+        createHTable(Bytes.toBytes(tablePrefix + "b_"));
+        Table recordTable2 = HBASE_ADMIN.getConnection().getTable(TableName.valueOf(tablePrefix + "a_"));
+        Table recordTable3 = HBASE_ADMIN.getConnection().getTable(TableName.valueOf(tablePrefix + "b_"));
 
         String hbaseTableName = tablePrefix + ".*";
         try {
@@ -533,7 +535,7 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
     }
 
     private static HTableDescriptor createHTable (byte[] tableName) throws Exception{
-        HTableDescriptor tableDescriptor = new HTableDescriptor(tableName);
+        HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableName));
         tableDescriptor.addFamily(new HColumnDescriptor(TEST_COLFAM_NAME));
         HBASE_ADMIN.createTable(tableDescriptor);
 

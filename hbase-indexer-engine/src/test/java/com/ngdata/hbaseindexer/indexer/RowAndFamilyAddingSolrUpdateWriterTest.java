@@ -59,7 +59,7 @@ public class RowAndFamilyAddingSolrUpdateWriterTest {
         RowAndFamilyAddingSolrUpdateWriter updateWriter = new RowAndFamilyAddingSolrUpdateWriter(null, "_col_",
                 uniqueKeyFormatter, keyValue, delegateWriter);
         
-        doReturn(new byte[0]).when(keyValue).getFamily();
+        doReturn(new byte[0]).when(keyValue).getFamilyArray();
         doReturn("_famname_").when(uniqueKeyFormatter).formatFamily(any(byte[].class));
         updateWriter.add(solrDocument);
         
@@ -74,8 +74,8 @@ public class RowAndFamilyAddingSolrUpdateWriterTest {
         
         byte[] rowBytes = "_row_".getBytes();
         
-        doReturn(rowBytes).when(keyValue).getRow();
-        doReturn("_rowkey_").when(uniqueKeyFormatter).formatRow(rowBytes);
+        doReturn(rowBytes).when(keyValue).getRowArray();
+        doReturn("_rowkey_").when(uniqueKeyFormatter).formatRow(any(byte[].class));
         updateWriter.add(solrDocument);
         
         verify(solrDocument).addField("_row_", "_rowkey_");

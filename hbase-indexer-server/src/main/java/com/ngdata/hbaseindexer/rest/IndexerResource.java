@@ -50,6 +50,8 @@ import com.ngdata.hbaseindexer.model.api.IndexerNotFoundException;
 import com.ngdata.hbaseindexer.model.api.WriteableIndexerModel;
 import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionJsonSerDeser;
 import com.ngdata.hbaseindexer.supervisor.IndexerSupervisor;
+
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -213,8 +215,8 @@ public class IndexerResource {
         }
         
         @Override
-        public List<KeyValue> getKeyValues() {            
-            return Lists.newArrayList(new KeyValue(rowKey));
+        public List<Cell> getKeyValues() {             
+            return Lists.newArrayList((Cell)new KeyValue(rowKey));
         }
 
         @Override
@@ -224,7 +226,7 @@ public class IndexerResource {
 
         @Override
         public Result toResult() {            
-            return new Result(getKeyValues());
+            return Result.create(getKeyValues());
         }
 
         @Override

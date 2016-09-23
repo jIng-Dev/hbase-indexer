@@ -29,8 +29,12 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class DemoUserIngester {
@@ -78,13 +82,15 @@ public class DemoUserIngester {
         final int batchSize = batchSizeOption.value(options);
 
         Configuration conf = HBaseIndexerConfiguration.create();
-
+        
         DemoSchema.createSchema(conf);
+        
+        Connection connection = ConnectionFactory.createConnection(conf);
 
         loadData();
 
         for (int i = 0; i < threads; i++) {
-            Thread thread = new Thread(new Putter("thread" + i, conf, batchSize));
+            Thread thread = new Thread(new Putter("thread" + i, conf, batchSize, connection));
             thread.start();
         }
 
@@ -110,17 +116,19 @@ public class DemoUserIngester {
         private Configuration conf;
         private int batchSize;
 
-        public Putter(String name, Configuration conf, int batchSize) {
+        private Connection connection;
+
+        public Putter(String name, Configuration conf, int batchSize, Connection connection) {
             this.name = name;
             this.conf = conf;
             this.batchSize = batchSize;
+            this.connection = connection;
         }
 
         @Override
         public void run() {
             try {
-                HTable htable = new HTable(conf, DemoSchema.USER_TABLE);
-
+                Table htable = connection.getTable(TableName.valueOf(DemoSchema.USER_TABLE));
                 while (true) {
                     List<Put> puts = new ArrayList<Put>();
                     for (int i = 0; i < batchSize; i++) {
@@ -133,10 +141,10 @@ public class DemoUserIngester {
                         String email = firstName.toLowerCase() + "@" + pickDomain();
                         int age = (int) Math.ceil(Math.random() * 100);
 
-                        put.add(infoCf, firstNameCq, Bytes.toBytes(firstName));
-                        put.add(infoCf, lastNameCq, Bytes.toBytes(lastName));
-                        put.add(infoCf, emailCq, Bytes.toBytes(email));
-                        put.add(infoCf, ageCq, Bytes.toBytes(age));
+                        put.addColumn(infoCf, firstNameCq, Bytes.toBytes(firstName));
+                        put.addColumn(infoCf, lastNameCq, Bytes.toBytes(lastName));
+                        put.addColumn(infoCf, emailCq, Bytes.toBytes(email));
+                        put.addColumn(infoCf, ageCq, Bytes.toBytes(age));
 
                         puts.add(put);
                     }

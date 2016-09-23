@@ -17,11 +17,11 @@ package com.ngdata.hbaseindexer.indexer;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
 
 /**
- * Represents a collection of {@code KeyValue}s under a single row key. This can be seen as a generalization of an HBase
+ * Represents a collection of {@code Cell}s under a single row key. This can be seen as a generalization of an HBase
  * Result object.
  */
 public interface RowData {
@@ -41,11 +41,11 @@ public interface RowData {
     byte[] getTable();
 
     /**
-     * Get the underlying list of {@code KeyValue}s.
+     * Get the underlying list of {@code Cell}s.
      * 
-     * @return underlying KeyValues
+     * @return underlying Cells
      */
-    List<KeyValue> getKeyValues();
+    List<Cell> getKeyValues();
     
     
     /**

@@ -17,7 +17,7 @@ package com.ngdata.hbaseindexer.indexer;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
 
 /**
@@ -39,8 +39,8 @@ public class ResultWrappingRowData implements RowData {
     }
 
     @Override
-    public List<KeyValue> getKeyValues() {
-        return result.list();
+    public List<Cell> getKeyValues() {
+        return result.listCells();
     }
 
     @Override

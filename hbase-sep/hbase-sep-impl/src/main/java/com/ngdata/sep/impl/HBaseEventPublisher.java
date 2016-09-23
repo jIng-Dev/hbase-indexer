@@ -46,7 +46,7 @@ public class HBaseEventPublisher implements EventPublisher {
     @Override
     public void publishEvent(byte[] row, byte[] payload) throws IOException {
         Put eventPut = new Put(row);
-        eventPut.add(payloadColumnFamily, payloadColumnQualifier, payload);
+        eventPut.addColumn(payloadColumnFamily, payloadColumnQualifier, payload);
         payloadTable.put(eventPut);
     }
     

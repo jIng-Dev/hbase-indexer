@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,9 +54,9 @@ public class AbstractPrefixMatchingExtractorTest {
     
     @Test
     public void testExtract_IncludeAll() {
-        Result result = new Result(new KeyValue[]{
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("ABB"), Bytes.toBytes("value ABB")),
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("ABC"), Bytes.toBytes("value ABC"))
+        Result result = Result.create(new Cell[]{
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("ABB"), Bytes.toBytes("value ABB")),
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("ABC"), Bytes.toBytes("value ABC"))
         });
         
         assertExtractEquals(Lists.newArrayList("ABB:value ABB", "ABC:value ABC"), extractor.extract(result));
@@ -62,10 +64,10 @@ public class AbstractPrefixMatchingExtractorTest {
     
     @Test
     public void testExtract_IncludeBottomHalf() {
-        Result result = new Result(new KeyValue[]{
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("AB"), Bytes.toBytes("value AB")),
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("ABB"), Bytes.toBytes("value ABB")),
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("AC"), Bytes.toBytes("value AC"))
+        Result result = Result.create(new Cell[]{
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("AB"), Bytes.toBytes("value AB")),
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("ABB"), Bytes.toBytes("value ABB")),
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("AC"), Bytes.toBytes("value AC"))
         });
         
         assertExtractEquals(Lists.newArrayList("AB:value AB", "ABB:value ABB"), extractor.extract(result));
@@ -73,10 +75,10 @@ public class AbstractPrefixMatchingExtractorTest {
     
     @Test
     public void testExtract_IncludeTopHalf() {
-        Result result = new Result(new KeyValue[]{
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("A"), Bytes.toBytes("value A")),
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("AB"), Bytes.toBytes("value AB")),
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("ABB"), Bytes.toBytes("value ABB"))
+        Result result = Result.create(new KeyValue[]{
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("A"), Bytes.toBytes("value A")),
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("AB"), Bytes.toBytes("value AB")),
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("ABB"), Bytes.toBytes("value ABB"))
         });
         
         assertExtractEquals(Lists.newArrayList("AB:value AB", "ABB:value ABB"), extractor.extract(result));
@@ -84,10 +86,10 @@ public class AbstractPrefixMatchingExtractorTest {
     
     @Test
     public void testExtract_IncludeMiddle() {
-        Result result = new Result(new KeyValue[]{
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("AAC"), Bytes.toBytes("value AAC")),
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("ABC"), Bytes.toBytes("value ABC")),
-                new KeyValue(ROW, COLFAM, Bytes.toBytes("ACC"), Bytes.toBytes("value ACC"))
+        Result result = Result.create(new KeyValue[]{
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("AAC"), Bytes.toBytes("value AAC")),
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("ABC"), Bytes.toBytes("value ABC")),
+            new KeyValue(ROW, COLFAM, Bytes.toBytes("ACC"), Bytes.toBytes("value ACC"))
         });
         
         assertExtractEquals(Lists.newArrayList("ABC:value ABC"), extractor.extract(result));

@@ -19,7 +19,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 
 import java.io.IOException;
@@ -38,9 +40,9 @@ public class DemoSchema {
     }
 
     public static void createSchema(Configuration hbaseConf) throws IOException {
-        HBaseAdmin admin = new HBaseAdmin(hbaseConf);
-        if (!admin.tableExists(USER_TABLE)) {
-            HTableDescriptor tableDescriptor = new HTableDescriptor(USER_TABLE);
+        Admin admin = ConnectionFactory.createConnection(hbaseConf).getAdmin();
+        if (!admin.tableExists(TableName.valueOf(USER_TABLE))) {
+            HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(USER_TABLE));
 
             HColumnDescriptor infoCf = new HColumnDescriptor("info");
             infoCf.setScope(1);
@@ -52,8 +54,8 @@ public class DemoSchema {
             admin.createTable(tableDescriptor, splitKeys);
         }
         
-        if (!admin.tableExists(MESSAGE_TABLE)) {
-            HTableDescriptor tableDescriptor = new HTableDescriptor(MESSAGE_TABLE);
+        if (!admin.tableExists(TableName.valueOf(MESSAGE_TABLE))) {
+            HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(MESSAGE_TABLE));
             HColumnDescriptor dataCf = new HColumnDescriptor("content");
             dataCf.setScope(1);
             tableDescriptor.addFamily(dataCf);

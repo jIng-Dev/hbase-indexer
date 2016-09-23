@@ -32,8 +32,12 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class DemoMessageIngester {
@@ -92,9 +96,10 @@ public class DemoMessageIngester {
 
         DemoSchema.createSchema(conf);
 
-
+        Connection connection = ConnectionFactory.createConnection(conf);
+        
         for (int i = 0; i < threads; i++) {
-            Thread thread = new Thread(new Putter("thread" + i, conf, batchSize, userCount));
+            Thread thread = new Thread(new Putter("thread" + i, conf, batchSize, userCount, connection));
             thread.start();
         }
 
@@ -120,18 +125,20 @@ public class DemoMessageIngester {
         private Configuration conf;
         private int batchSize;
         private int userCount;
+        private Connection connection;
 
-        public Putter(String name, Configuration conf, int batchSize, int userCount) {
+        public Putter(String name, Configuration conf, int batchSize, int userCount, Connection connection) {
             this.name = name;
             this.conf = conf;
             this.batchSize = batchSize;
             this.userCount = userCount;
+            this.connection = connection;
         }
 
         @Override
         public void run() {
             try {
-                HTable htable = new HTable(conf, DemoSchema.MESSAGE_TABLE);
+                Table htable = connection.getTable(TableName.valueOf(DemoSchema.MESSAGE_TABLE));
 
                 while (true) {
                     List<Put> puts = new ArrayList<Put>();
@@ -144,7 +151,7 @@ public class DemoMessageIngester {
                         int nonce = random.nextInt();
 
                         byte[] qualifier = Bytes.add(Bytes.toBytes(timestamp), Bytes.toBytes("_"), Bytes.toBytes(nonce));
-                        put.add(contentCf, qualifier, Bytes.toBytes(createMessageText()));
+                        put.addColumn(contentCf, qualifier, Bytes.toBytes(createMessageText()));
                         puts.add(put);
                     }
 

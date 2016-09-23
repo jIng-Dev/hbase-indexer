@@ -88,7 +88,7 @@ public class IndexerDryRunTest {
         SOLR_TEST_UTILITY.uploadConfig("config1",
                 Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "schema.xml")),
                 Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "solrconfig.xml")));
-        SOLR_TEST_UTILITY.createCore("collection1_core1", "collection1", "config1", 1);
+        SOLR_TEST_UTILITY.createCore("collection1_core11", "collection1", "config1", 1);
 
         COLLECTION = new CloudSolrClient(SOLR_TEST_UTILITY.getZkConnectString());
         COLLECTION.setDefaultCollection("collection1");
@@ -114,9 +114,8 @@ public class IndexerDryRunTest {
         
         recordTable = new HTable(HBASE_TEST_UTILITY.getConfiguration(), TEST_TABLE_NAME);
         
-        int zkPort = HBASE_TEST_UTILITY.getZkCluster().getClientPort();
         opts = new HBaseIndexingOptions(new Configuration());
-        opts.zkHost = "127.0.0.1:" + zkPort + "/solr";
+        opts.zkHost = SOLR_TEST_UTILITY.getZkConnectString();
         opts.hbaseTableName = Bytes.toString(TEST_TABLE_NAME);
         opts.hbaseIndexerConfigFile = new File(Resources.getResource(getClass(), "user_indexer.xml").toURI());
         opts.collection = "collection1";

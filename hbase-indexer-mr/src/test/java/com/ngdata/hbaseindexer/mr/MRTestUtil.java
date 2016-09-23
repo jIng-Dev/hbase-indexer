@@ -39,8 +39,11 @@ class MRTestUtil {
     
     public void runTool(String... args) throws Exception {
         HBaseMapReduceIndexerTool tool = new HBaseMapReduceIndexerTool();
+        Configuration conf = hbaseTestUtil.getConfiguration();
+        conf.setInt("mapreduce.map.maxattempts", 1); // faster unit tests with less spam
+        conf.setInt("mapreduce.reduce.maxattempts", 1); // faster unit tests with less spam
         int exitCode = ToolRunner.run(
-                hbaseTestUtil.getConfiguration(),
+                conf,
                 tool,
                 args);
         assertEquals(0, exitCode);
@@ -49,7 +52,7 @@ class MRTestUtil {
     public void startMrCluster() throws Exception {
         MiniMRCluster mrCluster = hbaseTestUtil.startMiniMapReduceCluster();
         Configuration conf = hbaseTestUtil.getConfiguration();
-        conf.set("mapred.job.tracker", mrCluster.createJobConf().get("mapred.job.tracker"));
+        conf.addResource(mrCluster.createJobConf()); // also pass Yarn conf properties
     }
     
     public static File substituteZkHost(File file, String zkConnectString) throws IOException {

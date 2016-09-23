@@ -17,6 +17,9 @@
 package com.ngdata.hbaseindexer.mr;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
@@ -54,7 +57,7 @@ public class TestUtils {
       if (dir.getPath().getName().startsWith("part") && dir.isDirectory()) {
         actualShards++;
         EmbeddedSolrServer solr = createEmbeddedSolrServer(
-            new Path(solrHomeDir.getAbsolutePath()), fs, dir.getPath());
+            solrHomeDir, fs, dir.getPath());
         
         try {
           SolrQuery query = new SolrQuery();
@@ -63,7 +66,7 @@ public class TestUtils {
           long numDocs = resp.getResults().getNumFound();
           actualDocs += numDocs;
         } finally {
-          solr.shutdown();
+          solr.close();
         }
       }
     }
@@ -71,10 +74,16 @@ public class TestUtils {
     assertEquals(expectedDocs, actualDocs);
   }
 
-  public static EmbeddedSolrServer createEmbeddedSolrServer(Path solrHomeDir, FileSystem fs, Path outputShardDir)
+  private static EmbeddedSolrServer createEmbeddedSolrServer(File solrHomeDir, FileSystem fs, Path outputShardDir)
           throws IOException {
 
     LOG.info("Creating embedded Solr server with solrHomeDir: " + solrHomeDir + ", fs: " + fs + ", outputShardDir: " + outputShardDir);
+
+    // copy solrHomeDir to ensure it isn't modified across multiple unit tests or multiple EmbeddedSolrServer instances
+    File tmpDir = Files.createTempDir();
+    tmpDir.deleteOnExit();
+    FileUtils.copyDirectory(solrHomeDir, tmpDir);
+    solrHomeDir = tmpDir;
 
     Path solrDataDir = new Path(outputShardDir, "data");
 
@@ -85,7 +94,7 @@ public class TestUtils {
     LOG.info(String
             .format(Locale.ENGLISH,
                     "Constructed instance information solr.home %s (%s), instance dir %s, conf dir %s, writing index to solr.data.dir %s, with permdir %s",
-                    solrHomeDir, solrHomeDir.toUri(), loader.getInstancePath(),
+                    solrHomeDir, solrHomeDir.toURI(), loader.getInstancePath(),
                     loader.getConfigDir(), dataDirStr, outputShardDir));
 
     // TODO: This is fragile and should be well documented
@@ -99,7 +108,7 @@ public class TestUtils {
     CoreContainer container = new CoreContainer(loader);
     container.load();
 
-    SolrCore core = container.create("core1", ImmutableMap.of(CoreDescriptor.CORE_DATADIR, dataDirStr));
+    SolrCore core = container.create("core1", Paths.get(solrHomeDir.toString()), ImmutableMap.of(CoreDescriptor.CORE_DATADIR, dataDirStr));
 
     if (!(core.getDirectoryFactory() instanceof HdfsDirectoryFactory)) {
       throw new UnsupportedOperationException(

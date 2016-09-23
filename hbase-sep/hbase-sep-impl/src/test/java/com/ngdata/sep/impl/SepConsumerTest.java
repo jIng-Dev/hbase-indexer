@@ -15,36 +15,45 @@
  */
 package com.ngdata.sep.impl;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-
 import com.google.common.collect.Lists;
 import com.ngdata.sep.EventListener;
 import com.ngdata.sep.PayloadExtractor;
 import com.ngdata.sep.SepEvent;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 public class SepConsumerTest {
 
     private static final long SUBSCRIPTION_TIMESTAMP = 100000;
-    
+
     private static final byte[] TABLE_NAME = Bytes.toBytes("test_table");
     private static final byte[] DATA_COLFAM = Bytes.toBytes("data");
     private static final byte[] PAYLOAD_QUALIFIER = Bytes.toBytes("pl");
+    private static final byte[] encodedRegionName = Bytes.toBytes("1028785192");
+    private static final UUID clusterUUID = UUID.randomUUID();
+    private static final List<UUID> clusterUUIDs = new ArrayList<UUID>();
 
     private EventListener eventListener;
     private ZooKeeperItf zkItf;
@@ -64,15 +73,17 @@ public class SepConsumerTest {
         sepConsumer.stop();
     }
 
-    private HLog.Entry createHlogEntry(byte[] tableName, KeyValue... keyValues) {
+    private WAL.Entry createHlogEntry(byte[] tableName, Cell... keyValues) {
         return createHlogEntry(tableName, SUBSCRIPTION_TIMESTAMP + 1, keyValues);
     }
 
-    private HLog.Entry createHlogEntry(byte[] tableName, long writeTime, KeyValue... keyValues) {
-        HLog.Entry entry = mock(HLog.Entry.class, Mockito.RETURNS_DEEP_STUBS);
-        when(entry.getEdit().getKeyValues()).thenReturn(Lists.newArrayList(keyValues));
-        when(entry.getKey().getTablename()).thenReturn(tableName);
+    private WAL.Entry createHlogEntry(byte[] tableName, long writeTime, Cell... keyValues) {
+        WAL.Entry entry = mock(WAL.Entry.class, Mockito.RETURNS_DEEP_STUBS);
+        when(entry.getEdit().getCells()).thenReturn(Lists.newArrayList(keyValues));
+        when(entry.getKey().getTablename()).thenReturn(TableName.valueOf(tableName));
         when(entry.getKey().getWriteTime()).thenReturn(writeTime);
+        when(entry.getKey().getEncodedRegionName()).thenReturn(encodedRegionName);
+        when(entry.getKey().getClusterIds()).thenReturn(clusterUUIDs);
         return entry;
     }
 
@@ -82,13 +93,13 @@ public class SepConsumerTest {
         byte[] rowKey = Bytes.toBytes("rowkey");
         byte[] payloadData = Bytes.toBytes("payload");
 
-        HLog.Entry hlogEntry = createHlogEntry(TABLE_NAME, new KeyValue(rowKey, DATA_COLFAM,
+        WAL.Entry hlogEntry = createHlogEntry(TABLE_NAME, new KeyValue(rowKey, DATA_COLFAM,
                 PAYLOAD_QUALIFIER, payloadData));
 
-        sepConsumer.replicateLogEntries(new HLog.Entry[]{hlogEntry});
+        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{hlogEntry});
 
-        SepEvent expectedSepEvent = new SepEvent(TABLE_NAME, rowKey,
-                hlogEntry.getEdit().getKeyValues(), payloadData);
+        SepEvent expectedSepEvent = SepEvent.create(TABLE_NAME, rowKey,
+                hlogEntry.getEdit().getCells(), payloadData);
 
         verify(eventListener).processEvents(Lists.newArrayList(expectedSepEvent));
     }
@@ -100,21 +111,21 @@ public class SepConsumerTest {
         byte[] payloadDataOnTimestamp = Bytes.toBytes("payloadOnTimestamp");
         byte[] payloadDataAfterTimestamp = Bytes.toBytes("payloadAfterTimestamp");
 
-        HLog.Entry hlogEntryBeforeTimestamp = createHlogEntry(TABLE_NAME, SUBSCRIPTION_TIMESTAMP - 1,
+        WAL.Entry hlogEntryBeforeTimestamp = createHlogEntry(TABLE_NAME, SUBSCRIPTION_TIMESTAMP - 1,
                 new KeyValue(rowKey, DATA_COLFAM, PAYLOAD_QUALIFIER, payloadDataBeforeTimestamp));
-        HLog.Entry hlogEntryOnTimestamp = createHlogEntry(TABLE_NAME, SUBSCRIPTION_TIMESTAMP,
+        WAL.Entry hlogEntryOnTimestamp = createHlogEntry(TABLE_NAME, SUBSCRIPTION_TIMESTAMP,
                 new KeyValue(rowKey, DATA_COLFAM, PAYLOAD_QUALIFIER, payloadDataOnTimestamp));
-        HLog.Entry hlogEntryAfterTimestamp = createHlogEntry(TABLE_NAME, SUBSCRIPTION_TIMESTAMP + 1,
+        WAL.Entry hlogEntryAfterTimestamp = createHlogEntry(TABLE_NAME, SUBSCRIPTION_TIMESTAMP + 1,
                 new KeyValue(rowKey, DATA_COLFAM, PAYLOAD_QUALIFIER, payloadDataAfterTimestamp));
 
-        sepConsumer.replicateLogEntries(new HLog.Entry[]{hlogEntryBeforeTimestamp});
-        sepConsumer.replicateLogEntries(new HLog.Entry[]{hlogEntryOnTimestamp});
-        sepConsumer.replicateLogEntries(new HLog.Entry[]{hlogEntryAfterTimestamp});
+        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{hlogEntryBeforeTimestamp});
+        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{hlogEntryOnTimestamp});
+        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{hlogEntryAfterTimestamp});
 
-        SepEvent expectedEventOnTimestamp = new SepEvent(TABLE_NAME, rowKey,
-                hlogEntryOnTimestamp.getEdit().getKeyValues(), payloadDataOnTimestamp);
-        SepEvent expectedEventAfterTimestamp = new SepEvent(TABLE_NAME, rowKey,
-                hlogEntryAfterTimestamp.getEdit().getKeyValues(), payloadDataAfterTimestamp);
+        SepEvent expectedEventOnTimestamp = SepEvent.create(TABLE_NAME, rowKey,
+                hlogEntryOnTimestamp.getEdit().getCells(), payloadDataOnTimestamp);
+        SepEvent expectedEventAfterTimestamp = SepEvent.create(TABLE_NAME, rowKey,
+                hlogEntryAfterTimestamp.getEdit().getCells(), payloadDataAfterTimestamp);
 
         // Event should be published for data on or after the subscription timestamp, but not before
         verify(eventListener, times(1)).processEvents(Lists.newArrayList(expectedEventOnTimestamp));
@@ -126,16 +137,16 @@ public class SepConsumerTest {
     public void testReplicateLogEntries_MultipleKeyValuesForSingleRow() throws Exception {
         byte[] rowKey = Bytes.toBytes("rowKey");
 
-        KeyValue kvA = new KeyValue(rowKey, DATA_COLFAM, PAYLOAD_QUALIFIER, Bytes.toBytes("A"));
-        KeyValue kvB = new KeyValue(rowKey, DATA_COLFAM, PAYLOAD_QUALIFIER, Bytes.toBytes("B"));
+        Cell kvA = new KeyValue(rowKey, DATA_COLFAM, PAYLOAD_QUALIFIER, Bytes.toBytes("A"));
+        Cell kvB = new KeyValue(rowKey, DATA_COLFAM, PAYLOAD_QUALIFIER, Bytes.toBytes("B"));
 
-        HLog.Entry entry = createHlogEntry(TABLE_NAME, kvA, kvB);
+        WAL.Entry entry = createHlogEntry(TABLE_NAME, kvA, kvB);
 
-        sepConsumer.replicateLogEntries(new HLog.Entry[]{entry});
+        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{entry});
 
         // We should get the first payload in our event (and the second one will be ignored, although the KeyValue will
         // be present in the event
-        SepEvent expectedEvent = new SepEvent(TABLE_NAME, rowKey, Lists.newArrayList(kvA, kvB),
+        SepEvent expectedEvent = SepEvent.create(TABLE_NAME, rowKey, Lists.newArrayList(kvA, kvB),
                 Bytes.toBytes("A"));
 
         verify(eventListener).processEvents(Lists.newArrayList(expectedEvent));
@@ -150,16 +161,16 @@ public class SepConsumerTest {
         byte[] rowKeyB = Bytes.toBytes("B");
         byte[] data = Bytes.toBytes("data");
 
-        KeyValue kvA = new KeyValue(rowKeyA, DATA_COLFAM, PAYLOAD_QUALIFIER, data);
-        KeyValue kvB = new KeyValue(rowKeyB, DATA_COLFAM, PAYLOAD_QUALIFIER, data);
+        Cell kvA = new KeyValue(rowKeyA, DATA_COLFAM, PAYLOAD_QUALIFIER, data);
+        Cell kvB = new KeyValue(rowKeyB, DATA_COLFAM, PAYLOAD_QUALIFIER, data);
 
-        HLog.Entry entry = createHlogEntry(TABLE_NAME, kvA, kvB);
+        WAL.Entry entry = createHlogEntry(TABLE_NAME, kvA, kvB);
 
-        sepConsumer.replicateLogEntries(new HLog.Entry[]{entry});
+        ReplicationProtbufUtil.replicateWALEntry(sepConsumer, new WAL.Entry[]{entry});
 
-        SepEvent expectedEventA = new SepEvent(TABLE_NAME, rowKeyA, Lists.newArrayList(kvA),
+        SepEvent expectedEventA = SepEvent.create(TABLE_NAME, rowKeyA, Lists.newArrayList(kvA),
                 Bytes.toBytes("data"));
-        SepEvent expectedEventB = new SepEvent(TABLE_NAME, rowKeyB, Lists.newArrayList(kvB),
+        SepEvent expectedEventB = SepEvent.create(TABLE_NAME, rowKeyB, Lists.newArrayList(kvB),
                 Bytes.toBytes("data"));
 
         verify(eventListener).processEvents(Lists.newArrayList(expectedEventA, expectedEventB));

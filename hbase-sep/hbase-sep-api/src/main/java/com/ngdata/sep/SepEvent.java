@@ -15,15 +15,15 @@
  */
 package com.ngdata.sep;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Contains information about a single atomic mutation that has occurred on a row in HBase.
@@ -53,22 +53,22 @@ public class SepEvent {
     /**
      * Single constructor.
      *
-     * @param table The HBase table on which the event was triggered
-     * @param row The row in the table where the event was triggered
-     * @param cells The list of updates to the HBase row
+     * @param table   The HBase table on which the event was triggered
+     * @param row     The row in the table where the event was triggered
+     * @param cells   The list of updates to the HBase row
      * @param payload Optional additional payload containing data about the data mutation(s)
      */
     public static SepEvent create(byte[] table, byte[] row, List<Cell> cells, byte[] payload) {
-      List<KeyValue> keyValues = new ArrayList<KeyValue>(cells.size());
-      for (Cell cell : cells) {
-        keyValues.add((KeyValue) cell);
-      }
-      return new SepEvent(table, row, keyValues, payload);
+        List<KeyValue> keyValues = new ArrayList<KeyValue>(cells.size());
+        for (Cell cell : cells) {
+            keyValues.add((KeyValue)cell);
+        }
+        return new SepEvent(table, row, keyValues, payload);
     }
 
     /**
      * Retrieve the table where this event was triggered.
-     *
+     * 
      * @return name of the HBase table
      */
     public byte[] getTable() {
@@ -77,7 +77,7 @@ public class SepEvent {
 
     /**
      * Retrieve the row key where this event was triggered.
-     *
+     * 
      * @return row key bytes
      */
     public byte[] getRow() {
@@ -86,7 +86,7 @@ public class SepEvent {
 
     /**
      * Retrieve the payload bytes for this event. Can be null.
-     *
+     * 
      * @return payload bytes, or null if not set
      */
     public byte[] getPayload() {
@@ -95,7 +95,7 @@ public class SepEvent {
 
     /**
      * Retrieve all grouped KeyValues that are involved in this event.
-     *
+     * 
      * @return list of key values
      */
     public List<KeyValue> getKeyValues() {

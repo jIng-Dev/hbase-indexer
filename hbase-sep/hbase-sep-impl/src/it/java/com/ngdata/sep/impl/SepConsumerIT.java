@@ -15,15 +15,6 @@
  */
 package com.ngdata.sep.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
@@ -48,14 +39,23 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class SepConsumerIT {
 
@@ -78,18 +78,18 @@ public class SepConsumerIT {
     private SepConsumer sepConsumerWithPayloads;
     private TestEventListener eventListener;
     private TestEventListener eventListenerWithPayloads;
-    
+
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         clusterConf = HBaseConfiguration.create();
         clusterConf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
         clusterConf.setLong("replication.source.sleepforretries", 50);
-        clusterConf.set("replication.replicationsource.implementation", SepReplicationSource.class.getName());
+        //clusterConf.set("replication.replicationsource.implementation", SepReplicationSource.class.getName());
         clusterConf.setInt("hbase.master.info.port", -1);
         clusterConf.setInt("hbase.regionserver.info.port", -1);
 
         hbaseTestUtil = new HBaseTestingUtility(clusterConf);
-        
+
         hbaseTestUtil.startMiniZKCluster(1);
         hbaseTestUtil.startMiniCluster(1);
 
@@ -174,9 +174,9 @@ public class SepConsumerIT {
 
         waitForEvents(eventListener, 2);
         waitForEvents(eventListenerWithPayloads, 2);
-        
+
         assertEquals(2, eventListenerWithPayloads.getEvents().size());
-        
+
         List<SepEvent> events = eventListener.getEvents();
 
         assertEquals(2, events.size());
@@ -189,34 +189,34 @@ public class SepConsumerIT {
             eventA = events.get(1);
             eventB = events.get(0);
         }
-        
+
         assertEquals("rowA", Bytes.toString(eventA.getRow()));
         assertEquals("rowB", Bytes.toString(eventB.getRow()));
     }
-    
+
     @Test
     public void testEvents_WithPayload() throws IOException {
         Put put = new Put(Bytes.toBytes("rowkey"));
         put.add(DATA_COL_FAMILY, Bytes.toBytes("data"), Bytes.toBytes("value"));
         put.add(PAYLOAD_COL_FAMILY, PAYLOAD_COL_QUALIFIER, Bytes.toBytes("payload"));
         htable.put(put);
-        
+
         waitForEvents(eventListener, 1);
         waitForEvents(eventListenerWithPayloads, 1);
-        
+
         SepEvent eventWithoutPayload = eventListener.getEvents().get(0);
         SepEvent eventWithPayload = eventListenerWithPayloads.getEvents().get(0);
-        
+
         assertEquals("rowkey", Bytes.toString(eventWithoutPayload.getRow()));
         assertEquals("rowkey", Bytes.toString(eventWithPayload.getRow()));
-        
+
         assertEquals(2, eventWithoutPayload.getKeyValues().size());
         assertEquals(2, eventWithPayload.getKeyValues().size());
-        
+
         assertNull(eventWithoutPayload.getPayload());
         assertEquals("payload", Bytes.toString(eventWithPayload.getPayload()));
     }
-    
+
     static String getDefaultUmask() throws IOException {
         // Hack to get around the test DFS cluster only wanting to start up if the
         // umask is set to the expected value (i.e. 022)
@@ -247,7 +247,7 @@ public class SepConsumerIT {
 
     static class TestEventListener implements EventListener {
 
-        private List<SepEvent> sepEvents = Collections.synchronizedList(Lists.<SepEvent> newArrayList());
+        private List<SepEvent> sepEvents = Collections.synchronizedList(Lists.<SepEvent>newArrayList());
 
         @Override
         public synchronized void processEvents(List<SepEvent> events) {

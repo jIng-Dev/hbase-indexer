@@ -15,32 +15,11 @@
  */
 package com.ngdata.sep.tools.monitoring;
 
-import com.ngdata.sep.impl.HBaseShims;
-
-import java.io.ByteArrayInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.URLEncoder;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
-import javax.management.AttributeNotFoundException;
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanServerConnection;
-import javax.management.ObjectName;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.ngdata.sep.tools.monitoring.ReplicationStatus.HLogInfo;
 import com.ngdata.sep.tools.monitoring.ReplicationStatus.Status;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -50,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -59,6 +39,24 @@ import org.apache.http.util.EntityUtils;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
+
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
+import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.URLEncoder;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Collects replication status information.
@@ -84,7 +82,7 @@ public class ReplicationStatusRetriever {
             throw new RuntimeException("HBase replication is not enabled.");
         }
 
-
+        
         fileSystem = FileSystem.get(conf);
         hbaseRootDir = FSUtils.getRootDir(conf);
         hbaseOldLogDir = new Path(hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
@@ -127,10 +125,10 @@ public class ReplicationStatusRetriever {
       } catch (NoSuchMethodException e) {
         method = null;
       }
-
+      
       ServerName serverName;
       if (method != null) {
-        // this is correct for hbase-0.96 and above
+        // this is correct for hbase-0.96 and above 
         try {
           serverName = (ServerName) method.invoke(null, masterServerName);
           Preconditions.checkNotNull(serverName);
@@ -147,6 +145,44 @@ public class ReplicationStatusRetriever {
         Preconditions.checkNotNull(serverName);
       }
       return serverName;
+    }
+
+    private long parseHLogPositionFrom(byte[] data) {
+      Method method;
+      try {
+        // this method is available for hbase-0.96 and above
+        method = ZKUtil.class.getMethod("parseHLogPositionFrom", byte[].class);
+        Preconditions.checkNotNull(method);
+      } catch (SecurityException e) {
+        method = null;
+      } catch (NoSuchMethodException e) {
+        method = null;
+      }
+      
+      long position;
+      if (method != null) {
+        // this is correct for hbase-0.96 and above 
+        try {
+          // i.e. position = ZKUtil.parseHLogPositionFrom(data);
+          position = (Long) method.invoke(null, data);
+        } catch (IllegalArgumentException e) {
+          throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        // this is correct for hbase-0.94 and below
+        try {
+          position = Long.parseLong(new String(data, "UTF-8"));
+        } catch (NumberFormatException e) {
+          throw new RuntimeException(e);
+        } catch (UnsupportedEncodingException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return position;
     }
 
     private byte[] readUrl(String url) throws IOException {
@@ -217,7 +253,7 @@ public class ReplicationStatusRetriever {
                         long position = -1;
                         if (data != null && data.length > 0) {
                             data = removeMetaData(data);
-                            position = ZKUtil.parseWALPositionFrom(data); // CDH-17163
+                            position = parseHLogPositionFrom(data);
                         }
 
                         HLogInfo hlogInfo = new HLogInfo(log);
@@ -233,7 +269,7 @@ public class ReplicationStatusRetriever {
 
         return new ReplicationStatus(statusByPeerAndServer);
     }
-
+    
     public void addStatusFromJmx(ReplicationStatus replicationStatus) throws Exception {
         JmxConnections jmxConnections = new JmxConnections();
 
@@ -244,10 +280,10 @@ public class ReplicationStatusRetriever {
 
                 MBeanServerConnection connection = jmxConnections.getConnector(hostName, HBASE_JMX_PORT).getMBeanServerConnection();
 
-                ObjectName replSourceBean = new ObjectName("Hadoop:service=HBase,name=RegionServer,sub=Replication");
+                ObjectName replSourceBean = new ObjectName("hadoop:service=Replication,name=ReplicationSource for " + URLEncoder.encode(peerId, "UTF8"));
 
                 try {
-                    status.ageOfLastShippedOp = (Long)connection.getAttribute(replSourceBean, "source." + URLEncoder.encode(peerId, "UTF8") + ".ageOfLastShippedOp");
+                    status.ageOfLastShippedOp = (Long)connection.getAttribute(replSourceBean, "ageOfLastShippedOp");
                 } catch (AttributeNotFoundException e) {
                     // could be the case if the queue disappeared since we read info from ZK
                 } catch (InstanceNotFoundException e) {
@@ -280,7 +316,7 @@ public class ReplicationStatusRetriever {
      * @param hlogName name of HLog
      */
     private long getLogFileSize(String serverName, String hlogName) throws IOException {
-        Path hbaseLogDir = new Path(hbaseRootDir, HBaseShims.getHLogDirectoryName(serverName));
+        Path hbaseLogDir = new Path(hbaseRootDir, DefaultWALProvider.getWALDirectoryName(serverName));
         Path path = new Path(hbaseLogDir, hlogName);
         try {
             FileStatus status = fileSystem.getFileStatus(path);

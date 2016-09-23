@@ -17,7 +17,6 @@ package com.ngdata.sep.impl;
 
 import com.google.common.base.Preconditions;
 import com.ngdata.sep.PayloadExtractor;
-
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -36,7 +35,7 @@ public class BasePayloadExtractor implements PayloadExtractor {
 
     /**
      * Construct with the table and column information from which payload data should be extracted.
-     *
+     * 
      * @param tableName name of the table on which mutation events will include payload data
      * @param columnFamily column family that will include payload data
      * @param columnQualifier column qualifier of the cell from which the payload data will be extracted
@@ -56,7 +55,7 @@ public class BasePayloadExtractor implements PayloadExtractor {
      * <p>
      * Data will only be extracted if it matches the configured table, column family, and column qualifiers. If no
      * payload data can be extracted, null will be returned.
-     *
+     * 
      * @param tableName table to which the {@code KeyValue} is being applied
      * @param keyValue contains a (partial) row mutation which may include payload data
      * @return the extracted payload data, or null if no payload data is included in the supplied {@code KeyValue}
@@ -68,7 +67,7 @@ public class BasePayloadExtractor implements PayloadExtractor {
         } else {
             return null;
         }
-
+        
     }
 
 }

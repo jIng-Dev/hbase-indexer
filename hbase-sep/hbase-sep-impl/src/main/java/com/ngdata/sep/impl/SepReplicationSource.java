@@ -13,22 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ngdata.sep;
+package com.ngdata.sep.impl;
 
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
 
 /**
- * Filter for removing non-applicable {@code KeyValue}s from {@code WALEdit}s before they are replicated via HBase replication.
+ * Retained for compatibility.
  */
-public interface WALEditFilter {
-
-    /**
-     * Apply filtering to a WALEdit.
-     * <p>
-     * All KeyValues that are to not be replicated are removed from the WALEdit in this call.
-     *
-     * @param walEdit edit from which KeyValues can be removed before replication
-     */
-    void apply(WALEdit walEdit);
+public class SepReplicationSource extends ReplicationSource {
 
 }

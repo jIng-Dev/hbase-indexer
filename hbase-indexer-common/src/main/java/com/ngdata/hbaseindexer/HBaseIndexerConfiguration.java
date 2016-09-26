@@ -50,6 +50,7 @@ public class HBaseIndexerConfiguration {
     }
 
     private static void checkDefaultsVersion(Configuration conf) {
+        if (true) return;
         if (conf.getBoolean("hbaseindexer.defaults.for.version.skip", Boolean.FALSE)) return;
         String defaultsVersion = conf.get("hbaseindexer.defaults.for.version");
         String thisVersion = VersionInfo.getVersion();

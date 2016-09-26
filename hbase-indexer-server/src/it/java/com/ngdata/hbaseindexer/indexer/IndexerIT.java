@@ -441,21 +441,24 @@ public class IndexerIT {
 
         indexerModel.addIndexer(indexerDef);
 
-        HTable table1 = new HTable(conf, "table1");
+        Table table1 = connection.getTable(TableName.valueOf("table1"));
 
         Put put = new Put(b("row1"));
-        put.add(b("family1"), b("qualifier1"), b("value1"));
+        put.addColumn(b("family1"), b("qualifier1"), b("value1"));
         table1.put(put);
 
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer1"));
         SepTestUtil.waitOnReplicationPeerReady(peerId("indexer2"));
-        SepTestUtil.waitOnReplication(conf, 60000L);
+        Waiter.waitFor(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                collection1.commit();
+                collection2.commit();
 
-        collection1.commit();
-        collection2.commit();
-
-        assertEquals(1, collection1.query(new SolrQuery("*:*")).getResults().size());
-        assertEquals(1, collection2.query(new SolrQuery("*:*")).getResults().size());
+                return collection1.query(new SolrQuery("*:*")).getResults().size() == 1 &&
+                        collection2.query(new SolrQuery("*:*")).getResults().size() == 1;
+            }
+        });
 
         table1.close();
     }

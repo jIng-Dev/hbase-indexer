@@ -60,6 +60,7 @@ import org.apache.solr.hadoop.SolrReducer;
 import org.apache.solr.hadoop.TreeMergeMapper;
 import org.apache.solr.hadoop.TreeMergeOutputFormat;
 import org.apache.solr.hadoop.Utils;
+import org.apache.zookeeper.KeeperException;
 import org.apache.solr.security.util.job.JobSecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -220,11 +221,11 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
               job.setNumReduceTasks(0);
               job.submit();
               callback.jobStarted(job.getJobID().toString(), job.getTrackingURL());
-              if (!ForkedMapReduceIndexerTool.waitForCompletion(job, hbaseIndexingOpts.isVerbose)) {
+              if (!waitForCompletion(job, hbaseIndexingOpts.isVerbose)) {
                   return -1; // job failed
               }
               commitSolr(indexingSpec.getIndexConnectionParams(), uniqueKeyField);
-              ForkedMapReduceIndexerTool.goodbye(job, programStartTime);
+              goodbye(job, programStartTime);
             } finally {
               JobSecurityUtil.cleanupCredentials(solrServer, job, hbaseIndexingOpts.zkHost);
             }
@@ -265,8 +266,8 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
     }
 
     private void clearSolr(Map<String, String> indexConnectionParams, String uniqueKeyField) throws SolrServerException, IOException {
-        Set<SolrServer> servers = createSolrServers(indexConnectionParams, uniqueKeyField);
-        for (SolrServer server : servers) {
+        Set<SolrClient> servers = createSolrServers(indexConnectionParams, uniqueKeyField);
+        for (SolrClient server : servers) {
             server.deleteByQuery("*:*");
             server.commit(false, false);
 			try {
@@ -278,8 +279,8 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
     }
 
     private void commitSolr(Map<String, String> indexConnectionParams, String uniqueKeyField) throws SolrServerException, IOException {
-        Set<SolrServer> servers = createSolrServers(indexConnectionParams, uniqueKeyField);
-        for (SolrServer server : servers) {
+        Set<SolrClient> servers = createSolrServers(indexConnectionParams, uniqueKeyField);
+        for (SolrClient server : servers) {
             server.commit(false, false);
 			try {
 				server.close();
@@ -289,7 +290,7 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
         }
     } 
 
-    private Set<SolrServer> createSolrServers(Map<String, String> indexConnectionParams, String uniqueKeyField) throws MalformedURLException {
+    private Set<SolrClient> createSolrServers(Map<String, String> indexConnectionParams, String uniqueKeyField) throws MalformedURLException {
         String solrMode = getSolrMode(indexConnectionParams);
         if (solrMode.equals("cloud")) {
             String indexZkHost = indexConnectionParams.get(SolrConnectionParams.ZOOKEEPER);
@@ -300,7 +301,7 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
             solrServer.setZkConnectTimeout(zkSessionTimeout);
             solrServer.setDefaultCollection(collectionName);
             solrServer.setIdField(uniqueKeyField);
-            return Collections.singleton((SolrServer) solrServer);
+            return Collections.singleton((SolrClient) solrServer);
         } else if (solrMode.equals("classic")) {
             PoolingClientConnectionManager connectionManager = new PoolingClientConnectionManager();
             connectionManager.setDefaultMaxPerRoute(getSolrMaxConnectionsPerRoute(indexConnectionParams));

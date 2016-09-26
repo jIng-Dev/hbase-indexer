@@ -34,7 +34,7 @@ import org.apache.solr.client.solrj.impl.HttpSolrClient;
  * Create cloud or classic {@link SolrClient} instances from a map of solr connection parameters.
  */
 public class SolrClientFactory {
-    public static SolrClient createCloudSolrClient(Map<String, String> connectionParameters, int zkSessionTimeout) {
+    public static SolrClient createCloudSolrClient(Map<String, String> connectionParameters, String uniqueKeyField, int zkSessionTimeout) {
         String solrZk = connectionParameters.get(SolrConnectionParams.ZOOKEEPER);
         CloudSolrClient solr = new CloudSolrClient(solrZk);
         solr.setZkClientTimeout(zkSessionTimeout);

@@ -152,11 +152,11 @@ public class Main {
                 indexerProcessRegistry, tablePool, conf);
 
         indexerSupervisor.init();
-        startHttpServer();
+        startHttpServer(conf, hostname);
 
     }
 
-    private void startHttpServer() throws Exception {
+    private void startHttpServer(Configuration conf, String hostname) throws Exception {
         server = new Server();
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
 

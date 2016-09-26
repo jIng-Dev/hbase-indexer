@@ -35,12 +35,14 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrInputDocument;
 import org.kitesdk.morphline.api.Command;
 import org.kitesdk.morphline.api.MorphlineCompilationException;
+import org.kitesdk.morphline.api.MorphlineRuntimeException;
 import org.kitesdk.morphline.api.Record;
 import org.kitesdk.morphline.base.Compiler;
 import org.kitesdk.morphline.base.FaultTolerance;
 import org.kitesdk.morphline.base.Fields;
 import org.kitesdk.morphline.base.Metrics;
 import org.kitesdk.morphline.base.Notifications;
+import org.kitesdk.morphline.solr.LoadSolrBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

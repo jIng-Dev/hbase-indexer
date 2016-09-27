@@ -47,8 +47,9 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.solr</groupId>
-      <artifactId>solr-map-reduce</artifactId>
+      <groupId>com.cloudera.search</groupId>
+      <artifactId>search-mr</artifactId>
+      <version>${cdh.search.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>

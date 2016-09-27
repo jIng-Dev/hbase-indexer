@@ -284,9 +284,9 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.apache.solr</groupId>
-        <artifactId>solr-map-reduce</artifactId>
-        <version>${version.solr}</version>
+        <groupId>com.cloudera.search</groupId>
+        <artifactId>search-mr</artifactId>
+        <version>${cdh.search.version}</version>
         <exclusions>
           <exclusion>
             <groupId>org.ow2.asm</groupId>

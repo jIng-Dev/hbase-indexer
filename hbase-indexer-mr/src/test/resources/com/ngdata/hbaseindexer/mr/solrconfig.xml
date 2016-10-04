@@ -8,6 +8,7 @@
                     class="${solr.directoryFactory:solr.StandardDirectoryFactory}"/>
 
   <indexConfig>
+    <lockType>${solr.lock.type:hdfs}</lockType>
   </indexConfig>
 
   <jmx />

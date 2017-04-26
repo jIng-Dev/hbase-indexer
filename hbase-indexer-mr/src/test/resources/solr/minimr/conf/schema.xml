@@ -63,6 +63,8 @@
             (int, float, boolean, string...)
      -->
 
+ <schemaFactory class="ClassicIndexSchemaFactory"/>
+  
  <fields>
    <!-- Valid attributes for fields:
      name: mandatory - the name for the field

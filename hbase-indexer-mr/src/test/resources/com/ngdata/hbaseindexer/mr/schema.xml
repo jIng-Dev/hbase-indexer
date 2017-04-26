@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <schema name="dynamic" version="1.5">
 
+  <schemaFactory class="ClassicIndexSchemaFactory"/>
+  
   <types>
     <fieldType name="string" class="solr.StrField" sortMissingLast="true" omitNorms="true"/>
 

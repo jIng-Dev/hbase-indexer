@@ -44,20 +44,22 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
-import org.apache.sentry.binding.hbaseindexer.rest.SentryIndexResource;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Handler;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.servlet.ServletHolder;
 import org.apache.sentry.binding.hbaseindexer.authz.HBaseIndexerAuthzBinding;
 import org.apache.sentry.binding.hbaseindexer.conf.HBaseIndexerAuthzConf;
+import org.apache.sentry.binding.hbaseindexer.rest.SentryIndexResource;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.io.File;
 import java.net.URL;
+import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
+
+import javax.servlet.DispatcherType;
 
 public class Main {
     private final static Log log = LogFactory.getLog(Main.class);
@@ -157,14 +159,23 @@ public class Main {
     }
 
     private void startHttpServer(Configuration conf, String hostname) throws Exception {
-        server = new Server();
-        SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
-
         int httpPort = conf.getInt(ConfKeys.HTTP_PORT, 11060);
-        log.debug("REST interface configured to run on port: " + httpPort);
-        selectChannelConnector.setPort(httpPort);
-        selectChannelConnector.setHeaderBufferSize(conf.getInt(ConfKeys.HTTP_HEADER_BUFFER_SIZE, 64 * 1024));
-        server.setConnectors(new Connector[]{selectChannelConnector});
+        log.debug("REST interface configured to run on port: " + httpPort);        
+        server = new Server(httpPort);
+        
+        int headerBufferSize = conf.getInt(ConfKeys.HTTP_HEADER_BUFFER_SIZE, 64 * 1024);
+        log.debug("REST headerBufferSize: " + headerBufferSize);        
+        for (Connector connector : server.getConnectors()) {
+          for (org.eclipse.jetty.server.ConnectionFactory factory : connector.getConnectionFactories()) {
+            if (factory instanceof HttpConnectionFactory) {
+              log.debug("REST headerBufferSize forced to: " + headerBufferSize);        
+              HttpConnectionFactory httpFactory = (HttpConnectionFactory) factory; 
+              httpFactory.getHttpConfiguration().setRequestHeaderSize(headerBufferSize);
+              httpFactory.getHttpConfiguration().setResponseHeaderSize(headerBufferSize);
+            }
+          }
+        }
+
         String restPackage = conf.get(ConfKeys.REST_RESOURCE_PACKAGE, "com/ngdata/hbaseindexer/compatrest");
         log.debug("REST interface package configured as: " + restPackage);
         // make sure we pick up the message bodies independent of the resource package
@@ -174,22 +185,20 @@ public class Main {
         ServletHolder servletHolder = new ServletHolder(new ServletContainer(packagesResourceConfig));
         servletHolder.setName("HBase-Indexer");
 
-
-        Context context = new Context(server, "/", Context.NO_SESSIONS);
+        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         context.addServlet(servletHolder, "/*");
         context.setContextPath("/");
         context.setAttribute("indexerModel", indexerModel);
         context.setAttribute("indexerSupervisor", indexerSupervisor);
-        context.addFilter(HostnameFilter.class, "*", Handler.REQUEST);
-        FilterHolder authFilterHolder =
-          context.addFilter(HBaseIndexerAuthFilter.class, "*", Handler.REQUEST);
-        context.addFilter(ErrorHandlerFilter.class, "*", Handler.REQUEST);
+        context.addFilter(HostnameFilter.class, "*", EnumSet.of(DispatcherType.REQUEST));
+        context.addFilter(HBaseIndexerAuthFilter.class, "*", EnumSet.of(DispatcherType.REQUEST));
+        context.addFilter(ErrorHandlerFilter.class, "*", EnumSet.of(DispatcherType.REQUEST));
         context.getServletContext().setAttribute(HBaseIndexerAuthFilter.CONF_ATTRIBUTE, conf);
+
         HBaseIndexerAuthzBinding binding = getAuthzBinding(conf, hostname);
         if (binding != null) {
           context.getServletContext().setAttribute(SentryIndexResource.SENTRY_BINDING, binding);
         }
-
 
         server.setHandler(context);
         server.start();

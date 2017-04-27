@@ -713,6 +713,7 @@
               <exclude>**/META-INF/services/**</exclude>
               <exclude>**/ForkedAlphaNumericComparator.java</exclude>
               <exclude>PATCH.txt</exclude>
+              <exclude>*settings.xml</exclude>
               <!-- MIT -->
             </excludes>
           </configuration>

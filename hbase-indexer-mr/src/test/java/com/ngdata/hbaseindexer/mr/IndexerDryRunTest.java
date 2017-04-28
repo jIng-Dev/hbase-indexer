@@ -37,7 +37,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -48,7 +47,6 @@ import java.util.Map.Entry;
 
 import static org.junit.Assert.assertEquals;
 
-@Ignore
 public class IndexerDryRunTest {
 
     private static final byte[] TEST_TABLE_NAME = Bytes.toBytes("record");

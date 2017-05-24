@@ -34,7 +34,7 @@
     <version.zookeeper>${cdh.zookeeper.version}</version.zookeeper>
     <version.jackson>1.9.13</version.jackson>
     <version.jackson-hadoop>2.7.8</version.jackson-hadoop>
-    <version.jetty>9.3.8.v20160314</version.jetty>
+    <version.jetty>${cdh.jetty9.version}</version.jetty>
     <version.httpclient>4.4.1</version.httpclient> <!-- which is what lucene/ivy wants -->    
     <version.kite>${cdh.kite.version}</version.kite>
     <version.jersey>1.19</version.jersey>

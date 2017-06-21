@@ -27,7 +27,7 @@
   <properties>
     <version.solr>${cdh.solr.version}</version.solr>
     <version.guava>11.0.2</version.guava>
-    <version.joda-time>1.6</version.joda-time>
+    <version.joda-time>${cdh.joda-time.version}</version.joda-time>
     <version.slf4j>${cdh.slf4j.version}</version.slf4j>
     <version.hbase>${cdh.hbase.version}</version.hbase>
     <version.hadoop>${cdh.hadoop.version}</version.hadoop>    

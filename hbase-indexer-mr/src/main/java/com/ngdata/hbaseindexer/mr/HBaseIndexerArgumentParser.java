@@ -200,6 +200,10 @@ class HBaseIndexerArgumentParser {
                     + "If --solr-home-dir is not specified, the Solr home directory for the collection "
                     + "will be downloaded from this ZooKeeper ensemble.");
 
+        Argument useZkSolrConfig = solrClusterInfoGroup.addArgument("--use-zk-solrconfig.xml")
+                .action(Arguments.storeTrue())
+                .help(FeatureControl.SUPPRESS);
+   
         Argument shardUrlsArg = nonSolrCloud(solrClusterInfoGroup.addArgument("--shard-url")
                 .metavar("URL")
                 .type(String.class)
@@ -514,6 +518,7 @@ class HBaseIndexerArgumentParser {
         opts.isDryRun = ns.getBoolean(dryRunArg.getDest());
         opts.isVerbose = ns.getBoolean(verboseArg.getDest());
         opts.zkHost = ns.getString(zkHostArg.getDest());
+        opts.useZkSolrConfig = ns.getBoolean(useZkSolrConfig.getDest());
         opts.shards = ns.getInt(shardsArg.getDest());
         opts.shardUrls = HBaseMapReduceIndexerTool.buildShardUrls(ns.getList(shardUrlsArg.getDest()), opts.shards);
         opts.goLive = ns.getBoolean(goLiveArg.getDest());

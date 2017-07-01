@@ -80,6 +80,7 @@ class HBaseIndexingOptions {
     boolean goLive;
     String collection;
     String zkHost;
+    boolean useZkSolrConfig;
     Integer goLiveThreads;
     List<List<String>> shardUrls;
     Path outputDir;

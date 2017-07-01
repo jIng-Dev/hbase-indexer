@@ -51,7 +51,7 @@ public class PublicZooKeeperInspector {
         return DELEGATE.getZkClient(zkHost);
     }
 
-    public static File downloadConfigDir(SolrZkClient zkClient, String configName) throws IOException, InterruptedException, KeeperException {
-        return DELEGATE.downloadConfigDir(zkClient, configName);
+    public static File downloadConfigDir(SolrZkClient zkClient, String configName, boolean useZkSolrConfig) throws IOException {
+        return DELEGATE.downloadConfigDir(zkClient, configName, useZkSolrConfig);
     }
 }

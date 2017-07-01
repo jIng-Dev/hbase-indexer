@@ -434,7 +434,7 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
             SolrZkClient zkClient = PublicZooKeeperInspector.getZkClient(options.zkHost);
             try {
                 String configName = PublicZooKeeperInspector.readConfigName(zkClient, options.collection);
-                File tmpSolrHomeDir = PublicZooKeeperInspector.downloadConfigDir(zkClient, configName);
+                File tmpSolrHomeDir = PublicZooKeeperInspector.downloadConfigDir(zkClient, configName, options.useZkSolrConfig);
                 SolrOutputFormat.setupSolrHomeCache(tmpSolrHomeDir, job);
                 LOG.debug("Using " + tmpSolrHomeDir + " as solr home");
                 options.solrHomeDir = tmpSolrHomeDir;

@@ -301,7 +301,7 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
             solrServer.setZkConnectTimeout(zkSessionTimeout);
             solrServer.setDefaultCollection(collectionName);
             solrServer.setIdField(uniqueKeyField);
-            return Collections.singleton((SolrClient) solrServer);
+            return Collections.singleton((SolrClient)solrServer);
         } else if (solrMode.equals("classic")) {
             PoolingClientConnectionManager connectionManager = new PoolingClientConnectionManager();
             connectionManager.setDefaultMaxPerRoute(getSolrMaxConnectionsPerRoute(indexConnectionParams));

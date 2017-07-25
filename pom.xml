@@ -215,6 +215,7 @@
         <groupId>org.apache.solr</groupId>
         <artifactId>solr-test-framework</artifactId>
         <version>${version.solr}</version>
+        <scope>test</scope>
         <exclusions>
           <exclusion>
             <groupId>org.ow2.asm</groupId>

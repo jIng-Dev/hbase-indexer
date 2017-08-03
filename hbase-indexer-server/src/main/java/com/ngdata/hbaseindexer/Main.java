@@ -91,14 +91,14 @@ public class Main {
                 System.exit(0);
             }
         }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             log.error("Error setting up hbase-indexer daemon", e);
             System.exit(1);
         }
 
         try {
             new Main().run(args);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             log.error(e);
             System.exit(1);
         }
@@ -160,8 +160,9 @@ public class Main {
 
     private void startHttpServer(Configuration conf, String hostname) throws Exception {
         int httpPort = conf.getInt(ConfKeys.HTTP_PORT, 11060);
-        log.debug("REST interface configured to run on port: " + httpPort);        
+        log.debug("REST interface configuring to run on port: " + httpPort);        
         server = new Server(httpPort);
+        log.debug("REST interface configured to run on port: " + httpPort);        
         
         int headerBufferSize = conf.getInt(ConfKeys.HTTP_HEADER_BUFFER_SIZE, 64 * 1024);
         log.debug("REST headerBufferSize: " + headerBufferSize);        

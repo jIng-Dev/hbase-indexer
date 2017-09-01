@@ -283,7 +283,7 @@ public class HBaseIndexerMapper extends TableMapper<Text, SolrInputDocumentWrita
         if (collectionName == null) {
             throw new IllegalStateException("No collection name defined");
         }
-        CloudSolrClient solrServer = new CloudSolrClient(indexZkHost);
+        CloudSolrClient solrServer = new CloudSolrClient.Builder().withZkHost(indexZkHost).build();
         int zkSessionTimeout = HBaseIndexerConfiguration.getSessionTimeout(context.getConfiguration());
         solrServer.setZkClientTimeout(zkSessionTimeout);
         solrServer.setZkConnectTimeout(zkSessionTimeout);      

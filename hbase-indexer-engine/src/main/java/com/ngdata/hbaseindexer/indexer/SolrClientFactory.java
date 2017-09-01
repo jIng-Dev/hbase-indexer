@@ -36,7 +36,7 @@ import org.apache.solr.client.solrj.impl.HttpSolrClient;
 public class SolrClientFactory {
     public static SolrClient createCloudSolrClient(Map<String, String> connectionParameters, String uniqueKeyField, int zkSessionTimeout) {
         String solrZk = connectionParameters.get(SolrConnectionParams.ZOOKEEPER);
-        CloudSolrClient solr = new CloudSolrClient(solrZk);
+        CloudSolrClient solr = new CloudSolrClient.Builder().withZkHost(solrZk).build();
         solr.setZkClientTimeout(zkSessionTimeout);
         solr.setZkConnectTimeout(zkSessionTimeout);      
         String collection = connectionParameters.get(SolrConnectionParams.COLLECTION);
@@ -48,7 +48,7 @@ public class SolrClientFactory {
     public static List<SolrClient> createHttpSolrClients(Map<String, String> connectionParams, HttpClient httpClient) {
         List<SolrClient> result = Lists.newArrayList();
         for (String shard : SolrConnectionParamUtil.getShards(connectionParams)) {
-            result.add(new HttpSolrClient(shard, httpClient));
+            result.add(new HttpSolrClient.Builder(shard).withHttpClient(httpClient).build());
         }
         if (result.size() == 0) {
             throw new RuntimeException(

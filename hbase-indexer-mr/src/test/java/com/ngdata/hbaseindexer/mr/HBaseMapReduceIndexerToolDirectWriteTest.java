@@ -101,10 +101,10 @@ public class HBaseMapReduceIndexerToolDirectWriteTest {
         
         SOLR_TEST_UTILITY.start();
         SOLR_TEST_UTILITY.uploadConfig("config1",
-                Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "schema.xml")),
+                Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "managed-schema")),
                 Resources.toByteArray(Resources.getResource(HBaseMapReduceIndexerToolDirectWriteTest.class, "solrconfig.xml")));
-        SOLR_TEST_UTILITY.createCore("collection1_core1", "collection1", "config1", 1);
-        SOLR_TEST_UTILITY.createCore("collection2_core1", "collection2", "config1", 1);
+        SOLR_TEST_UTILITY.createCollection("collection1", "config1", 1);
+        SOLR_TEST_UTILITY.createCollection("collection2", "config1", 1);
 
         COLLECTION1 = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();
         COLLECTION1.setDefaultCollection("collection1");

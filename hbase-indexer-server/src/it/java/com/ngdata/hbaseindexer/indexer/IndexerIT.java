@@ -122,10 +122,10 @@ public class IndexerIT {
         solrTestingUtility = new SolrTestingUtility(zkClientPort, NetUtils.getFreePort());
         solrTestingUtility.start();
         solrTestingUtility.uploadConfig("config1",
-                Resources.toByteArray(Resources.getResource(IndexerIT.class, "schema.xml")),
+                Resources.toByteArray(Resources.getResource(IndexerIT.class, "managed-schema")),
                 Resources.toByteArray(Resources.getResource(IndexerIT.class, "solrconfig.xml")));
-        solrTestingUtility.createCore("collection1_core1", "collection1", "config1", 1);
-        solrTestingUtility.createCore("collection2_core1", "collection2", "config1", 1);
+        solrTestingUtility.createCollection("collection1", "config1", 1);
+        solrTestingUtility.createCollection("collection2", "config1", 1);
 
         collection1 = new CloudSolrClient.Builder().withZkHost(solrTestingUtility.getZkConnectString()).build();
         collection1.setDefaultCollection("collection1");

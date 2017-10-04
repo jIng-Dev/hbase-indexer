@@ -21,17 +21,29 @@ import com.google.common.io.Files;
 import com.ngdata.sep.util.zookeeper.ZkUtil;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 import org.apache.commons.io.FileUtils;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.JettySolrRunner;
+import org.apache.solr.client.solrj.impl.CloudSolrClient;
+import org.apache.solr.client.solrj.request.CollectionAdminRequest;
+import org.apache.solr.client.solrj.response.RequestStatusState;
+import org.apache.solr.common.cloud.ClusterState;
+import org.apache.solr.common.cloud.DocCollection;
 import org.apache.solr.common.cloud.OnReconnect;
+import org.apache.solr.common.cloud.Replica;
+import org.apache.solr.common.cloud.Slice;
 import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.solr.common.cloud.ZkConfigManager;
+import org.apache.solr.common.cloud.ZkStateReader;
+import org.apache.solr.core.Diagnostics;
+import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -99,7 +111,7 @@ public class SolrTestingUtility {
         PrintWriter solrXmlWriter = new PrintWriter(solrXml);
         solrXmlWriter.println("<solr>");
         solrXmlWriter.println("  <solrcloud>");
-        solrXmlWriter.println("    <str name=\"host\">localhost</str>");
+        solrXmlWriter.println("    <str name=\"host\">127.0.0.1</str>");
         solrXmlWriter.println("    <int name=\"hostPort\">${solr.port}</int>");
         solrXmlWriter.println("    <str name=\"hostContext\">/solr</str>");
         solrXmlWriter.println("  </solrcloud>");
@@ -141,7 +153,7 @@ public class SolrTestingUtility {
             throws IOException {
         // Write schema & solrconf to temporary dir, upload dir, delete tmp dir
         File tmpConfDir = Files.createTempDir();
-        Files.copy(ByteStreams.newInputStreamSupplier(schema), new File(tmpConfDir, "schema.xml"));
+        Files.copy(ByteStreams.newInputStreamSupplier(schema), new File(tmpConfDir, "managed-schema"));
         Files.copy(ByteStreams.newInputStreamSupplier(solrconf), new File(tmpConfDir, "solrconfig.xml"));
         uploadConfig(confName, tmpConfDir);
         FileUtils.deleteDirectory(tmpConfDir);
@@ -163,35 +175,6 @@ public class SolrTestingUtility {
     }
 
     /**
-     * Creates a new core, associated with a collection, in Solr.
-     */
-    public void createCore(String coreName, String collectionName, String configName, int numShards) throws IOException {
-        createCore(coreName, collectionName, configName, numShards, null);
-    }
-
-    /**
-     * Creates a new core, associated with a collection, in Solr.
-     */
-    public void createCore(String coreName, String collectionName, String configName, int numShards, String dataDir) throws IOException {
-        String url = "http://localhost:" + solrPort + "/solr/admin/cores?action=CREATE&name=" + coreName
-                + "&collection=" + collectionName + "&configName=" + configName + "&numShards=" + numShards;
-
-        if (dataDir != null) {
-            url += "&dataDir=" + dataDir;
-        }
-
-        URL coreActionURL = new URL(url);
-        HttpURLConnection conn = (HttpURLConnection)coreActionURL.openConnection();
-        conn.connect();
-        int response = conn.getResponseCode();
-        conn.disconnect();
-        if (response != 200) {
-            throw new RuntimeException("Request to " + url + ": expected status 200 but got: " + response + ": "
-                    + conn.getResponseMessage());
-        }
-    }
-
-    /**
      * Create a Solr collection with a given number of shards.
      *
      * @param collectionName name of the collection to be created
@@ -199,10 +182,90 @@ public class SolrTestingUtility {
      * @param numShards      number of shards in the collection
      */
     public void createCollection(String collectionName, String configName, int numShards) throws IOException {
-        for (int shardIndex = 0; shardIndex < numShards; shardIndex++) {
-            String coreName = String.format("%s_shard%d", collectionName, shardIndex + 1);
-            createCore(coreName, collectionName, configName, numShards, coreName + "_data");
+      int TIMEOUT = 30; // seconds
+      CloudSolrClient solrClient = new CloudSolrClient.Builder().withZkHost(getZkConnectString()).build();
+      solrClient.setDefaultCollection(collectionName);
+      CollectionAdminRequest.Create request = CollectionAdminRequest.createCollection(
+          collectionName, configName, numShards, 1);
+      request.setMaxShardsPerNode(numShards);
+      RequestStatusState state;
+      try {
+          state = request.processAndWait(solrClient, TIMEOUT);
+      } catch (SolrServerException | InterruptedException e) {
+          throw new RuntimeException(e);
+      }
+      if (state != RequestStatusState.COMPLETED) {
+          throw new IllegalStateException("Unexpected state: " + state);
+      }
+      waitForRecoveriesToFinish(
+          collectionName, solrClient.getZkStateReader(), true, true, TIMEOUT);
+    }
+
+    // copied from AbstractDistribZkTestBase.waitForRecoveriesToFinish()
+    private static void waitForRecoveriesToFinish(String collection,
+        ZkStateReader zkStateReader, boolean verbose, boolean failOnTimeout, int timeoutSeconds)
+         {
+      Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+      log.info("Wait for recoveries to finish - collection: " + collection + " failOnTimeout:" + failOnTimeout + " timeout (sec):" + timeoutSeconds);
+      boolean cont = true;
+      int cnt = 0;
+      
+      while (cont) {
+        if (verbose) System.out.println("-");
+        boolean sawLiveRecovering = false;
+        ClusterState clusterState = zkStateReader.getClusterState();
+        final DocCollection docCollection = clusterState.getCollectionOrNull(collection);
+        if (docCollection == null) throw new IllegalStateException("Could not find collection:" + collection);
+        Map<String,Slice> slices = docCollection.getSlicesMap();
+        if (slices == null) throw new IllegalStateException("Could not find collection:" + collection);
+        for (Map.Entry<String,Slice> entry : slices.entrySet()) {
+          Slice slice = entry.getValue();
+          if (slice.getState() == Slice.State.CONSTRUCTION) { // similar to replica recovering; pretend its the same thing
+            if (verbose) System.out.println("Found a slice in construction state; will wait.");
+            sawLiveRecovering = true;
+          }
+          Map<String,Replica> shards = slice.getReplicasMap();
+          for (Map.Entry<String,Replica> shard : shards.entrySet()) {
+            if (verbose) System.out.println("replica:" + shard.getValue().getName() + " rstate:"
+                + shard.getValue().getStr(ZkStateReader.STATE_PROP)
+                + " live:"
+                + clusterState.liveNodesContain(shard.getValue().getNodeName()));
+            final Replica.State state = shard.getValue().getState();
+            if ((state == Replica.State.RECOVERING || state == Replica.State.DOWN || state == Replica.State.RECOVERY_FAILED)
+                && clusterState.liveNodesContain(shard.getValue().getStr(ZkStateReader.NODE_NAME_PROP))) {
+              sawLiveRecovering = true;
+            }
+          }
         }
+        if (!sawLiveRecovering || cnt == timeoutSeconds) {
+          if (!sawLiveRecovering) {
+            if (verbose) System.out.println("no one is recoverying");
+          } else {
+            if (verbose) System.out.println("Gave up waiting for recovery to finish..");
+            if (failOnTimeout) {
+              Diagnostics.logThreadDumps("Gave up waiting for recovery to finish.  THREAD DUMP:");
+              try {
+                zkStateReader.getZkClient().printLayoutToStdOut();
+              } catch (KeeperException | InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+              throw new IllegalStateException("There are still nodes recoverying - waited for " + timeoutSeconds + " seconds");
+              // won't get here
+              //return;
+            }
+          }
+          cont = false;
+        } else {
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        cnt++;
+      }
+
+      log.info("Recoveries finished - collection: " + collection);
     }
 
 }

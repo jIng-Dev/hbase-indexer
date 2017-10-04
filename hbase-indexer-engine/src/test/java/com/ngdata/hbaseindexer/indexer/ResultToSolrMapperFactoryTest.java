@@ -50,9 +50,9 @@ public class ResultToSolrMapperFactoryTest {
         SOLR_TEST_UTILITY = new SolrTestingUtility(ZK_CLIENT_PORT, NetUtils.getFreePort());
         SOLR_TEST_UTILITY.start();
         SOLR_TEST_UTILITY.uploadConfig("config1",
-                Resources.toByteArray(Resources.getResource(ResultToSolrMapperFactoryTest.class, "schema.xml")),
+                Resources.toByteArray(Resources.getResource(ResultToSolrMapperFactoryTest.class, "managed-schema")),
                 Resources.toByteArray(Resources.getResource(ResultToSolrMapperFactoryTest.class, "solrconfig.xml")));
-        SOLR_TEST_UTILITY.createCore("collection1_core1", "collection1", "config1", 1);
+        SOLR_TEST_UTILITY.createCollection("collection1", "config1", 1);
 
         COLLECTION1 = new CloudSolrClient.Builder().withZkHost(SOLR_TEST_UTILITY.getZkConnectString()).build();
         COLLECTION1.setDefaultCollection("collection1");

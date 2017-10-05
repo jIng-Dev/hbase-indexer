@@ -512,20 +512,6 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-server</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-        <version>${version.hbase}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-mapreduce</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-        <version>${version.hbase}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-client</artifactId>
         <type>test-jar</type>
         <scope>test</scope>

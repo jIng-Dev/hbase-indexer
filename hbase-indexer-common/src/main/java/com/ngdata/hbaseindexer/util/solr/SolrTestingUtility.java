@@ -194,7 +194,7 @@ public class SolrTestingUtility {
       } catch (SolrServerException | InterruptedException e) {
           throw new RuntimeException(e);
       }
-      if (state != RequestStatusState.COMPLETED) {
+      if (state != RequestStatusState.COMPLETED && state != RequestStatusState.RUNNING) {
           throw new IllegalStateException("Unexpected state: " + state);
       }
       waitForRecoveriesToFinish(

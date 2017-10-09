@@ -15,7 +15,6 @@
  */
 package com.ngdata.sep.tools.monitoring;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.ngdata.sep.tools.monitoring.ReplicationStatus.HLogInfo;
 import com.ngdata.sep.tools.monitoring.ReplicationStatus.Status;
@@ -27,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -46,10 +46,6 @@ import javax.management.ObjectName;
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.List;
@@ -115,74 +111,19 @@ public class ReplicationStatusRetriever {
     }
 
     private ServerName getServerName(byte[] masterServerName) {
-      Method method;
       try {
-        // this method is available for hbase-0.96 and above
-        method = ServerName.class.getMethod("parseFrom", byte[].class);
-        Preconditions.checkNotNull(method);
-      } catch (SecurityException e) {
-        method = null;
-      } catch (NoSuchMethodException e) {
-        method = null;
+        return org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseServerNameFrom(masterServerName);
+      } catch (DeserializationException e) {
+        throw new RuntimeException(e);
       }
-      
-      ServerName serverName;
-      if (method != null) {
-        // this is correct for hbase-0.96 and above 
-        try {
-          serverName = (ServerName) method.invoke(null, masterServerName);
-          Preconditions.checkNotNull(serverName);
-        } catch (IllegalArgumentException e) {
-          throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-          throw new RuntimeException(e);
-        } catch (InvocationTargetException e) {
-          throw new RuntimeException(e);
-        }
-      } else {
-        // this is correct for hbase-0.94 and below
-        serverName = ServerName.parseVersionedServerName(masterServerName);
-        Preconditions.checkNotNull(serverName);
-      }
-      return serverName;
     }
 
     private long parseHLogPositionFrom(byte[] data) {
-      Method method;
       try {
-        // this method is available for hbase-0.96 and above
-        method = ZKUtil.class.getMethod("parseHLogPositionFrom", byte[].class);
-        Preconditions.checkNotNull(method);
-      } catch (SecurityException e) {
-        method = null;
-      } catch (NoSuchMethodException e) {
-        method = null;
+        return ZKUtil.parseWALPositionFrom(data);
+      } catch (DeserializationException e) {
+        throw new RuntimeException(e);
       }
-      
-      long position;
-      if (method != null) {
-        // this is correct for hbase-0.96 and above 
-        try {
-          // i.e. position = ZKUtil.parseHLogPositionFrom(data);
-          position = (Long) method.invoke(null, data);
-        } catch (IllegalArgumentException e) {
-          throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-          throw new RuntimeException(e);
-        } catch (InvocationTargetException e) {
-          throw new RuntimeException(e);
-        }
-      } else {
-        // this is correct for hbase-0.94 and below
-        try {
-          position = Long.parseLong(new String(data, "UTF-8"));
-        } catch (NumberFormatException e) {
-          throw new RuntimeException(e);
-        } catch (UnsupportedEncodingException e) {
-          throw new RuntimeException(e);
-        }
-      }
-      return position;
     }
 
     private byte[] readUrl(String url) throws IOException {
@@ -334,24 +275,7 @@ public class ReplicationStatusRetriever {
     }
     
     private String getWALDirectoryName(String serverName) {
-        //return org.apache.hadoop.hbase.wal.FSHLogProvider.getWALDirectoryName(serverName); // hbase-1.x
-        //return org.apache.hadoop.hbase.wal.DefaultWALProvider.getWALDirectoryName(serverName); // hbase-2.x
-        Class clazz = null;
-        try {
-            try {
-                clazz = Class.forName("org.apache.hadoop.hbase.wal.FSHLogProvider"); // hbase-2.x
-            } catch (ClassNotFoundException e) {
-                clazz = Class.forName("org.apache.hadoop.hbase.wal.DefaultWALProvider"); // hbase-1.x        
-            }
-            Method method = clazz.getMethod("getWALDirectoryName", String.class);
-            if (!Modifier.isStatic(method.getModifiers())) {
-                throw new IllegalStateException("Incompatible class: " + clazz);
-            }
-            String walDirName = (String) method.invoke(null, serverName);
-            return walDirName;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return org.apache.hadoop.hbase.wal.FSHLogProvider.getWALDirectoryName(serverName); // hbase-1.x
     }
 
     private static final byte MAGIC =(byte) 0XFF;

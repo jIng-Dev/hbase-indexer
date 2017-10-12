@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Contains information on the current replication status.
@@ -81,11 +82,7 @@ public class ReplicationStatus {
     public static class Status {
         List<HLogInfo> hlogs = new ArrayList<HLogInfo>();
         Long ageOfLastShippedOp;
-        Long timestampOfLastShippedOp;
-        Integer selectedPeerCount;
-        String sleepReason;
-        Integer sleepMultiplier;
-        Long timestampLastSleep;
+        final Map<String, Object> jmxAttributes = new TreeMap<String, Object>();
 
         int getHLogCount() {
             int count = 0;

@@ -15,8 +15,6 @@
  */
 package com.ngdata.sep.tools.monitoring;
 
-import org.joda.time.DateTime;
-
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -34,8 +32,7 @@ public class ReplicationStatusReport {
             return;
         }
 
-        String columnFormat = "  | %1$-50.50s | %2$-15.15s | %3$-15.15s | %4$-15.15s | %5$-15.15s | %6$-30.30s | %7$-5.5s |\n";
-        String columnFormatWide = "  | %1$-50.50s | %2$-110.110s |\n";
+        String columnFormat = "  | %1$-60.60s | %2$-15.15s | %3$-15.15s | %4$-15.15s | %5$-15.15s | %6$s |\n";
 
         out.println();
         out.println();
@@ -58,8 +55,8 @@ public class ReplicationStatusReport {
         out.println("   will disappear once processed.");
         out.println();
 
-        out.format(columnFormat, "Host", "Queue size",      "Size all HLogs",  "Current HLog", "Age last",   "TS last",    "Peer");
-        out.format(columnFormat, "",     "(incl. current)", "(excl. current)", "progress",     "shipped op", "shipped op", "count");
+        out.format(columnFormat, "Host", "Queue size",      "Size all HLogs",  "Current HLog", "Age last",   "JMX");
+        out.format(columnFormat, "",     "(incl. current)", "(excl. current)", "progress",     "shipped op", "attribs");
 
         for (String peerId : sort(replicationStatus.getPeersAndRecoveredQueues())) {
             out.println();
@@ -74,12 +71,7 @@ public class ReplicationStatusReport {
                 out.format(columnFormat, server,
                         String.valueOf(status.getHLogCount()), formatAsMB(status.getTotalHLogSize()),
                         formatProgress(status.getProgressOnCurrentHLog()), formatDuration(status.ageOfLastShippedOp),
-                        formatTimestamp(status.timestampOfLastShippedOp), formatInt(status.selectedPeerCount));
-                if (status.timestampLastSleep != null) {
-                    long sleepAge = System.currentTimeMillis() - status.timestampLastSleep;
-                    out.format(columnFormatWide, "", "Last slept " + formatDuration(sleepAge) + " ago (muliplier: "
-                            + status.sleepMultiplier + "): " + status.sleepReason);
-                }
+                        status.jmxAttributes);
             }
         }
         out.println();
@@ -126,23 +118,4 @@ public class ReplicationStatusReport {
                 days, hours, minutesOverflow, secondsOverflow, millisOverflow);
     }
 
-    private static String formatTimestamp(Long timestamp) {
-        if (timestamp == null) {
-            return "unknown";
-        }
-
-        if (timestamp <= 0) {
-            return "no activity yet";
-        }
-
-        return new DateTime(timestamp).toString();
-    }
-
-    private static String formatInt(Integer value) {
-        if (value == null) {
-            return "unknown";
-        }
-
-        return String.valueOf(value);
-    }
 }

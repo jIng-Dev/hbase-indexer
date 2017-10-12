@@ -41,6 +41,8 @@ import org.apache.zookeeper.data.Stat;
 
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
 import java.io.ByteArrayInputStream;
@@ -220,30 +222,29 @@ public class ReplicationStatusRetriever {
                 String hostName = ServerName.parseHostname(server);
 
                 MBeanServerConnection connection = jmxConnections.getConnector(hostName, HBASE_JMX_PORT).getMBeanServerConnection();
+                ObjectName replSourceBean = new ObjectName("Hadoop:service=HBase,name=RegionServer,sub=Replication");
+                String peerIdStr = URLEncoder.encode(peerId, "UTF8");
 
-                ObjectName replSourceBean = new ObjectName("hadoop:service=Replication,name=ReplicationSource for " + URLEncoder.encode(peerId, "UTF8"));
-
+                // Fetch metrics such as Source.Indexer_MyNRTIndexer.ageOfLastShippedOp_max
                 try {
-                    status.ageOfLastShippedOp = (Long)connection.getAttribute(replSourceBean, "ageOfLastShippedOp");
+                    status.ageOfLastShippedOp = (Long)connection.getAttribute(replSourceBean, "Source." + peerIdStr + ".ageOfLastShippedOp_max");
                 } catch (AttributeNotFoundException e) {
                     // could be the case if the queue disappeared since we read info from ZK
                 } catch (InstanceNotFoundException e) {
                     // could be the case if the queue disappeared since we read info from ZK
                 }
-
-                // The following mbean is only available when using NGDATA's ForkedReplicationSource
-                ObjectName replSourceInfoBean = new ObjectName("hadoop:service=Replication,name=ReplicationSourceInfo for " + URLEncoder.encode(peerId, "UTF8"));
-                try {
-                    status.selectedPeerCount = (Integer)connection.getAttribute(replSourceInfoBean, "SelectedPeerCount");
-                    status.timestampOfLastShippedOp = (Long)connection.getAttribute(replSourceInfoBean, "TimestampLastShippedOp");
-                    status.sleepReason = (String)connection.getAttribute(replSourceInfoBean, "SleepReason");
-                    status.sleepMultiplier = (Integer)connection.getAttribute(replSourceInfoBean, "SleepMultiplier");
-                    status.timestampLastSleep = (Long)connection.getAttribute(replSourceInfoBean, "TimestampLastSleep");
-                } catch (AttributeNotFoundException e) {
-                    // could be the case if the queue disappeared since we read info from ZK
-                } catch (InstanceNotFoundException e) {
-                    // could be the case if the queue disappeared since we read info from ZK
-                    // or the ForkedReplicationSource isn't used
+                
+                // Fetch metrics such as source.Indexer_MyNRTIndexer.shippedOps etc
+                MBeanInfo info = connection.getMBeanInfo(replSourceBean);
+                for (MBeanAttributeInfo attrInfo : info.getAttributes()) {
+                    String longName = attrInfo.getName();
+                    String prefix1 = "Source." + peerIdStr + ".";
+                    String prefix2 = "source." + peerIdStr + ".";    
+                    if (longName.startsWith(prefix1) || longName.startsWith(prefix2)) {
+                        Object attr = connection.getAttribute(replSourceBean, longName);
+                        String shortName = longName.substring(prefix1.length(), longName.length());
+                        status.jmxAttributes.put(shortName, attr);
+                    }
                 }
             }
         }

@@ -71,18 +71,21 @@ public class ReplicationStatusRetriever {
     private final String zookeeperZNodeParent;
     public static final int HBASE_JMX_PORT = 10102;
 
-    public ReplicationStatusRetriever(ZooKeeperItf zk, int hbaseMasterPort, boolean useSSL) throws InterruptedException, IOException, KeeperException {
+    public ReplicationStatusRetriever(ZooKeeperItf zk, int hbaseMasterPort, boolean useSSL, String zookeeperZNodeParent) throws InterruptedException, IOException, KeeperException {
         this.zk = zk;
         this.useSSL = useSSL;
+
+        // hbase config param "zookeeper.znode.parent" defaults to "/hbase"
+        if (zookeeperZNodeParent == null) {
+          zookeeperZNodeParent = HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT;
+        }
+        this.zookeeperZNodeParent = zookeeperZNodeParent;
 
         Configuration conf = getHBaseConf(zk, hbaseMasterPort);
 
         if (!"true".equalsIgnoreCase(conf.get("hbase.replication"))) {
             throw new RuntimeException("HBase replication is not enabled.");
         }
-
-        // aka get("zookeeper.znode.parent", "/hbase")
-        zookeeperZNodeParent = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
 
         fileSystem = FileSystem.get(conf);
         hbaseRootDir = FSUtils.getRootDir(conf);

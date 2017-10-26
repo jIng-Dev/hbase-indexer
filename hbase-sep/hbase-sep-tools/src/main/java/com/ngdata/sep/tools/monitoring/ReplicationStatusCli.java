@@ -51,6 +51,10 @@ public class ReplicationStatusCli {
         OptionSpec<Void> useSSL = parser
             .acceptsAll(ImmutableList.of("use-ssl"), "Use SSL/TLS while communicating with HBase Master web ui");
 
+        OptionSpec<String> zookeeperZNodeParentOption = parser
+            .acceptsAll(ImmutableList.of("zookeeper.znode.parent"), "HBase param zookeeper.znode.parent, defaults to /hbase")
+            .withRequiredArg().ofType(String.class);
+    
         OptionSet options = null;
         try {
             options = parser.parse(args);
@@ -67,7 +71,7 @@ public class ReplicationStatusCli {
         System.out.println("Connecting to Zookeeper " + zkConnectString + "...");
         ZooKeeperItf zk = ZkUtil.connect(zkConnectString, 30000);
 
-        ReplicationStatusRetriever retriever = new ReplicationStatusRetriever(zk, options.valueOf(hbaseMasterPortOption), options.has(useSSL));
+        ReplicationStatusRetriever retriever = new ReplicationStatusRetriever(zk, options.valueOf(hbaseMasterPortOption), options.has(useSSL), options.valueOf(zookeeperZNodeParentOption));
         ReplicationStatus replicationStatus = retriever.collectStatusFromZooKeepeer();
 
         if (enableJmx) {

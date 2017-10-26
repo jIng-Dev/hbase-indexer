@@ -68,6 +68,7 @@ public class ReplicationStatusRetriever {
     private final Path hbaseRootDir;
     private final Path hbaseOldLogDir;
     private final boolean useSSL;
+    private final String zookeeperZNodeParent;
     public static final int HBASE_JMX_PORT = 10102;
 
     public ReplicationStatusRetriever(ZooKeeperItf zk, int hbaseMasterPort, boolean useSSL) throws InterruptedException, IOException, KeeperException {
@@ -80,7 +81,9 @@ public class ReplicationStatusRetriever {
             throw new RuntimeException("HBase replication is not enabled.");
         }
 
-        
+        // aka get("zookeeper.znode.parent", "/hbase")
+        zookeeperZNodeParent = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+
         fileSystem = FileSystem.get(conf);
         hbaseRootDir = FSUtils.getRootDir(conf);
         hbaseOldLogDir = new Path(hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
@@ -89,7 +92,7 @@ public class ReplicationStatusRetriever {
     private Configuration getHBaseConf(ZooKeeperItf zk, int hbaseMasterPort) throws KeeperException, InterruptedException, IOException {
         // Read the HBase/Hadoop configuration via the master web ui
         // This is debatable, but it avoids any pitfalls with conf dirs and also works with launch-test-lily
-        byte[] masterServerName = removeMetaData(zk.getData("/hbase/master", false, new Stat()));
+        byte[] masterServerName = removeMetaData(zk.getData(zookeeperZNodeParent + "/master", false, new Stat()));
         String hbaseMasterHostName = getServerName(masterServerName).getHostname();
 
         String ulrScheme = (useSSL) ? "https" : "http" ;
@@ -148,7 +151,7 @@ public class ReplicationStatusRetriever {
     public ReplicationStatus collectStatusFromZooKeepeer() throws Exception {
         Map<String, Map<String, Status>> statusByPeerAndServer = Maps.newHashMap();
 
-        String regionServerPath = "/hbase/replication/rs";
+        String regionServerPath = zookeeperZNodeParent + "/replication/rs";
         List<String> regionServers = zk.getChildren(regionServerPath, false);
 
         for (String server : regionServers) {

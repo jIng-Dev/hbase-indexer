@@ -15,7 +15,6 @@
  */
 package com.ngdata.sep.impl;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
@@ -171,16 +170,6 @@ public class BaseHRegionServer implements AdminProtos.AdminService.BlockingInter
 
     @Override
     public org.apache.hadoop.hbase.ChoreService getChoreService() {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public FileSystem getFileSystem() {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public boolean isStopping() {
         throw new UnsupportedOperationException("Not implemented");
     }
 

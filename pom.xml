@@ -456,6 +456,13 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-zookeeper</artifactId>
+        <version>${version.hbase}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-server</artifactId>
         <version>${version.hbase}</version>
         <exclusions>

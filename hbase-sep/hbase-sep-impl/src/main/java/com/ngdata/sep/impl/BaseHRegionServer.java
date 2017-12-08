@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 /**
  *
@@ -110,7 +110,7 @@ public class BaseHRegionServer implements AdminProtos.AdminService.BlockingInter
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -151,6 +151,11 @@ public class BaseHRegionServer implements AdminProtos.AdminService.BlockingInter
 
     @Override
     public org.apache.hadoop.hbase.client.ClusterConnection getConnection() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public org.apache.hadoop.hbase.client.Connection createConnection(Configuration conf) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -212,6 +217,12 @@ public class BaseHRegionServer implements AdminProtos.AdminService.BlockingInter
     public AdminProtos.ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller,
 	    AdminProtos.ClearCompactionQueuesRequest request) throws ServiceException {
       throw new UnsupportedOperationException("Not implemented");      
+    }
+
+    @Override
+    public AdminProtos.ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
+        AdminProtos.ClearRegionBlockCacheRequest request) throws ServiceException {
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override

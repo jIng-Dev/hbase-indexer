@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
@@ -80,7 +80,7 @@ public class SepConsumer extends BaseHRegionServer {
     private final Configuration hbaseConf;
     private RpcServer rpcServer;
     private ServerName serverName;
-    private ZooKeeperWatcher zkWatcher;
+    private ZKWatcher zkWatcher;
     private SepMetrics sepMetrics;
     private final PayloadExtractor payloadExtractor;
     private String zkNodePath;
@@ -146,7 +146,7 @@ public class SepConsumer extends BaseHRegionServer {
           );
           */
         this.serverName = ServerName.valueOf(hostName, rpcServer.getListenerAddress().getPort(), System.currentTimeMillis());
-        this.zkWatcher = new ZooKeeperWatcher(hbaseConf, this.serverName.toString(), null);
+        this.zkWatcher = new ZKWatcher(hbaseConf, this.serverName.toString(), null);
 
         // login the zookeeper client principal (if using security)
         ZKUtil.loginClient(hbaseConf, "hbase.zookeeper.client.keytab.file",
@@ -314,7 +314,7 @@ public class SepConsumer extends BaseHRegionServer {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
         return zkWatcher;
     }
 

@@ -18,14 +18,20 @@ package org.apache.sentry.binding.hbaseindexer.rest;
 
 import com.ngdata.hbaseindexer.compatrest.CliCompatibleIndexResource;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
+import com.ngdata.hbaseindexer.model.api.IndexerDefinitionBuilder;
+import com.ngdata.hbaseindexer.model.api.IndexerException;
 import com.ngdata.hbaseindexer.model.impl.IndexerDefinitionJsonSerDeser;
-import com.ngdata.hbaseindexer.servlet.HBaseIndexerAuthFilter;
 import com.ngdata.hbaseindexer.servlet.IndexerServerException;
+import org.apache.sentry.binding.hbaseindexer.authz.HBaseIndexerAuthzBinding;
+import org.apache.sentry.core.common.Subject;
+import org.apache.sentry.core.common.exception.SentryUserException;
+import org.apache.sentry.core.model.indexer.Indexer;
+import org.apache.sentry.core.model.indexer.IndexerModelAction;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.server.auth.KerberosName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.Collection;
-import java.util.EnumSet;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -39,19 +45,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.sentry.core.common.Subject;
-import org.apache.sentry.binding.hbaseindexer.authz.HBaseIndexerAuthzBinding;
-import org.apache.sentry.binding.hbaseindexer.authz.SentryHBaseIndexerAuthorizationException;
-import org.apache.sentry.binding.hbaseindexer.conf.HBaseIndexerAuthzConf;
-import org.apache.sentry.core.model.indexer.Indexer;
-import org.apache.sentry.core.model.indexer.IndexerModelAction;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.server.auth.KerberosName;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.stream.Collectors;
 
 
 @Path("indexer")
@@ -69,7 +66,7 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
   }
 
   /**
-   * see {@link CliCompatibleIndexerResource#get}
+   * see {@link CliCompatibleIndexResource#get}
    */
   @GET
   @Produces("application/json")
@@ -78,16 +75,20 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
     if (authzBinding == null) {
       throwNullBindingException();
     }
-    Collection<IndexerDefinition> indexers = super.get(uriInfo, securityContext);
+    Collection<Indexer> indexers = super.get(uriInfo, securityContext).stream()
+        .map(indexerDefinition -> new Indexer(indexerDefinition.getName()))
+        .collect(Collectors.toList());
     try {
-      return authzBinding.filterIndexers(getSubject(securityContext), indexers);
-    } catch (SentryHBaseIndexerAuthorizationException e) {
-      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, e);
+      return authzBinding.filterIndexers(getSubject(securityContext), indexers).stream()
+          .map(indexer -> new IndexerDefinitionBuilder().name(indexer.getName()).build())
+          .collect(Collectors.toList());
+    } catch (SentryUserException e) {
+      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, new SentryBindingException(e));
     }
   }
 
   /**
-   * see {@link CliCompatibleIndexerResource#delete}
+   * see {@link CliCompatibleIndexResource#delete}
    */
   @DELETE
   @Produces("application/json")
@@ -98,15 +99,15 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
       throwNullBindingException();
     }
     try {
-      authzBinding.authorizeIndexerAction(getSubject(securityContext), new Indexer(indexerName), EnumSet.of(IndexerModelAction.WRITE));
-    } catch (SentryHBaseIndexerAuthorizationException e) {
-      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, e);
+      authzBinding.authorize(getSubject(securityContext), new Indexer(indexerName), EnumSet.of(IndexerModelAction.WRITE));
+    } catch (SentryUserException e) {
+      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, new SentryBindingException(e));
     }
     return super.delete(securityContext, indexerName);
   }
 
   /**
-   * see {@link CliCompatibleIndexerResource#put}
+   * see {@link CliCompatibleIndexResource#put}
    */
   @PUT
   @Path("{name}")
@@ -118,15 +119,15 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
       throwNullBindingException();
     }
     try {
-      authzBinding.authorizeIndexerAction(getSubject(securityContext), new Indexer(indexName), EnumSet.of(IndexerModelAction.WRITE));
-    } catch (SentryHBaseIndexerAuthorizationException e) {
-      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, e);
+      authzBinding.authorize(getSubject(securityContext), new Indexer(indexName), EnumSet.of(IndexerModelAction.WRITE));
+    } catch (SentryUserException e) {
+      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, new SentryBindingException(e));
     }
     return super.put(securityContext, indexName, jsonBytes);
   }
 
   /**
-   * see {@link CliCompatibleIndexerResource#post}
+   * see {@link CliCompatibleIndexResource#post}
    */
   @POST
   @Consumes("application/json")
@@ -138,22 +139,22 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
     }
     IndexerDefinition def = getIndexerFromJson(jsonBytes);
     try {
-      authzBinding.authorizeIndexerAction(getSubject(securityContext), new Indexer(def.getName()), EnumSet.of(IndexerModelAction.WRITE));
-    } catch (SentryHBaseIndexerAuthorizationException e) {
-      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, e);
+      authzBinding.authorize(getSubject(securityContext), new Indexer(def.getName()), EnumSet.of(IndexerModelAction.WRITE));
+    } catch (SentryUserException e) {
+      throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, new SentryBindingException(e));
     }
     return super.post(securityContext, jsonBytes);
   }
 
   private Subject getSubject(SecurityContext securityContext)
-  throws SentryHBaseIndexerAuthorizationException {
+  throws SentryUserException {
     String princ = securityContext.getUserPrincipal() != null ?
       securityContext.getUserPrincipal().getName() : null;
     KerberosName kerbName = new KerberosName(princ);
     try {
       return new Subject(kerbName.getShortName());
     } catch (IOException e) {
-      throw new SentryHBaseIndexerAuthorizationException("Unable to get subject", e);
+      throw new SentryUserException("Unable to get subject", e);
     }
   }
 
@@ -162,14 +163,28 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
       return IndexerDefinitionJsonSerDeser.INSTANCE.fromJsonBytes(jsonBytes).build();
     } catch (Exception e) {
       throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED,
-        new SentryHBaseIndexerAuthorizationException("Unable to test permissions, "+ e.getMessage(), e));
+        new SentryBindingException("Unable to test permissions, "+ e.getMessage(), e));
     }
   }
 
   private void throwNullBindingException() throws IndexerServerException {
-    throw new IndexerServerException(HBaseIndexerAuthzBinding.SC_UNAUTHORIZED,
-      new SentryHBaseIndexerAuthorizationException(
+    throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED,
+      new SentryBindingException(
        "HBaseIndexer-Sentry binding was not created successfully. Defaulting to no access"));
+  }
+
+  static public class SentryBindingException extends IndexerException{
+    public SentryBindingException(String message) {
+      super(message);
+    }
+
+    public SentryBindingException(String message, Throwable cause) {
+      super(message, cause);
+    }
+
+    public SentryBindingException(Throwable cause) {
+      super(cause);
+    }
   }
 
 }

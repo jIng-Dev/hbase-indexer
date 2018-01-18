@@ -37,13 +37,17 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -98,6 +102,8 @@ public class IndexerIT {
         //   while we can work around that particular one by deleting replication peers first, there are
         //   still other issues that I haven't tracked down completely.
         //   On the plus side, since stuff keeps running between tests, they should run a bit faster.
+
+        LogManager.getLogger(Class.forName("org.apache.hadoop.hbase.client.ConnectionImplementation")).setLevel(Level.ERROR);
 
         // We'll use the same conf object for hbase master/rs, hbase-indexer, and hbase client
         conf = HBaseIndexerConfiguration.create();
@@ -274,6 +280,76 @@ public class IndexerIT {
         table.delete(delete);
 
         waitForSolrDocumentCount(0);
+
+        table.close();
+    }
+
+    @Test
+    public void testBasicScenarioWithIncrement() throws Exception {
+        // Create a table in HBase
+        createTable("table1", "family1");
+
+        // Add an indexer
+        WriteableIndexerModel indexerModel = main.getIndexerModel();
+        IndexerDefinition indexerDef = new IndexerDefinitionBuilder()
+                .name("indexer1")
+                .configuration(
+                        Bytes.toBytes("<indexer table='table1'><field name='field2_l' value='family1:qualifier2' type='long'/></indexer>"))
+                .connectionType("solr")
+                .connectionParams(ImmutableMap.of("solr.zk", solrTestingUtility.getZkConnectString(),
+                        "solr.collection", "collection1"))
+                .build();
+
+        indexerModel.addIndexer(indexerDef);
+
+        // Ingest
+        Table table = connection.getTable(TableName.valueOf("table1"));
+        Put put = new Put(b("row2"));
+        put.addColumn(b("family1"), b("qualifier2"), Bytes.toBytes(123L));
+        Increment inc = new Increment(b("row2"));
+        inc.addColumn(b("family1"), b("qualifier2"), 2);
+        table.batch(Arrays.asList(put, inc), new Object[2]);
+
+        waitForSolrDocumentCount(1);
+
+        QueryResponse response = collection1.query(new SolrQuery("*:*"));
+        SolrDocument doc = response.getResults().get(0);
+        assertEquals(125L, doc.getFirstValue("field2_l")); // 123+2=125
+
+        table.close();
+    }
+
+    @Test
+    public void testBasicScenarioWithAppend() throws Exception {
+        // Create a table in HBase
+        createTable("table1", "family1");
+
+        // Add an indexer
+        WriteableIndexerModel indexerModel = main.getIndexerModel();
+        IndexerDefinition indexerDef = new IndexerDefinitionBuilder()
+                .name("indexer1")
+                .configuration(
+                        Bytes.toBytes("<indexer table='table1'><field name='field1_s' value='family1:qualifier1'/></indexer>"))
+                .connectionType("solr")
+                .connectionParams(ImmutableMap.of("solr.zk", solrTestingUtility.getZkConnectString(),
+                        "solr.collection", "collection1"))
+                .build();
+
+        indexerModel.addIndexer(indexerDef);
+
+        // Ingest
+        Table table = connection.getTable(TableName.valueOf("table1"));
+        Put put = new Put(b("row2"));
+        put.addColumn(b("family1"), b("qualifier1"), b("hello"));
+        Append append = new Append(b("row2"));
+        append.addColumn(b("family1"), b("qualifier1"), b("world"));
+        table.batch(Arrays.asList(put, append), new Object[2]);
+
+        waitForSolrDocumentCount(1);
+
+        QueryResponse response = collection1.query(new SolrQuery("*:*"));
+        SolrDocument doc = response.getResults().get(0);
+        assertEquals("helloworld", doc.getFirstValue("field1_s").toString()); // "hello"+"world"="helloworld"
 
         table.close();
     }
@@ -1209,7 +1285,7 @@ public class IndexerIT {
 
     private void waitForSolrDocumentCount(int count) throws Exception {
         long waitUntil = System.currentTimeMillis() + 60000L;
-        int resultSize = 0;
+        int resultSize = Integer.MIN_VALUE;
         while (resultSize != count) {
             collection1.commit();
             QueryResponse response = collection1.query(new SolrQuery("*:*"));

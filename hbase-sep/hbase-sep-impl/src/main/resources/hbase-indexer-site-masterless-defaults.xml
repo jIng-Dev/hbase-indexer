@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+/**
+ * Copyright 2013 NGDATA nv
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<configuration>
+  
+  <!-- for HBASE-18846 stable public API --> 
+  <!-- This file shuts down
+       facility in the regionserver and interjects a special 
+       Connection implementation which is how hbase-indexer will 
+       receive the replication stream from source hbase cluster. 
+       See the class referenced in the config. 
+
+       Most of the config in here is booleans set to off and 
+       setting values to zero so services doon't start. Some of 
+       the flags are new via this patch. 
+  --> 
+
+  <!--Need this for the RegionServer to come up standalone--> 
+  <property> 
+    <name>hbase.cluster.distributed</name> 
+    <value>true</value> 
+  </property> 
+
+  <!--This is what you implement, a Connection that returns a Table that 
+       overrides the batch call. It is at this point you do your indexer inserts. 
+    --> 
+  <property> 
+    <name>hbase.client.connection.impl</name> 
+    <value>com.ngdata.sep.impl.SepConnection</value> 
+    <description>A customs connection implementation just so we can interject our 
+      own Table class, one that has an override for the batch call which receives 
+      the replication stream edits; i.e. it is called by the replication sink 
+      #replicateEntries method.</description> 
+  </property> 
+
+  <!--Set hbase.regionserver.info.port to -1 for no webui--> 
+  <property>
+    <name>hbase.master.info.port</name>
+    <value>-1</value>
+    <description>The port for the hbase master web UI
+    Set to -1 if you do not want the info server to run.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.info.port</name>
+    <value>-1</value>
+    <description>The port for the hbase regionserver web UI
+    Set to -1 if you do not want the info server to run.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.info.port.auto</name>
+    <value>true</value>
+    <description>Info server auto port bind. Enables automatic port
+    search if hbase.regionserver.info.port is already in use.
+    Enabled for testing to run multiple tests on one machine.
+    </description>
+  </property>
+
+  <!--Below are configs to shut down unused services in hregionserver--> 
+  <property> 
+    <name>hbase.regionserver.admin.service</name> 
+    <value>false</value> 
+    <description>Do NOT stand up an Admin Service Interface on RPC</description> 
+  </property> 
+  <property> 
+    <name>hbase.regionserver.client.service</name> 
+    <value>false</value> 
+    <description>Do NOT stand up a client-facing Service on RPC</description> 
+  </property> 
+  <property> 
+    <name>hbase.wal.provider</name> 
+    <value>org.apache.hadoop.hbase.wal.DisabledWALProvider</value> 
+    <description>Set WAL service to be the null WAL</description> 
+  </property> 
+  <property> 
+    <name>hbase.regionserver.workers</name> 
+    <value>false</value> 
+    <description>Turn off all background workers, log splitters, executors, etc.</description> 
+  </property> 
+  <property> 
+    <name>hfile.block.cache.size</name> 
+    <value>0.0001</value> 
+    <description>Turn off block cache completely</description> 
+  </property> 
+  <property> 
+    <name>hbase.mob.file.cache.size</name> 
+    <value>0</value> 
+    <description>Disable MOB cache.</description> 
+  </property> 
+  <property> 
+    <name>hbase.masterless</name> 
+    <value>true</value> 
+    <description>Do not expect Master in cluster.</description> 
+  </property> 
+  <property> 
+    <name>hbase.regionserver.metahandler.count</name> 
+    <value>1</value> 
+    <description>How many priority handlers to run; we probably need none. 
+    Default is 20 which is too much on a server like this.</description> 
+  </property> 
+  <property> 
+    <name>hbase.regionserver.replication.handler.count</name> 
+    <value>1</value> 
+    <description>How many replication handlers to run; we probably need none. 
+    Default is 3 which is too much on a server like this.</description> 
+  </property> 
+  <property> 
+    <name>hbase.regionserver.handler.count</name> 
+    <value>10</value> 
+    <description>How many default handlers to run; tie to # of CPUs. 
+    Default is 30 which is too much on a server like this.</description> 
+  </property> 
+  <property> 
+    <name>hbase.ipc.server.read.threadpool.size</name> 
+    <value>3</value> 
+    <description>How many Listener request reaaders to run; tie to a portion # of CPUs (1/4?). 
+    Default is 10 which is too much on a server like this.</description> 
+  </property> 
+</configuration> 

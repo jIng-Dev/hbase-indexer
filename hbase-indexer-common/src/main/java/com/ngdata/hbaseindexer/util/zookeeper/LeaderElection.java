@@ -25,6 +25,8 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.data.Stat;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 
@@ -140,7 +142,13 @@ public class LeaderElection {
 
             if (stat.getEphemeralOwner() == zk.getSessionId() && !elected) {
                 elected = true;
-                log.info("Elected as leader for the position of " + position);
+                String host = "Unknown";
+                try {
+                  host = InetAddress.getLocalHost().toString();
+                } catch (UnknownHostException e) {
+                  ; // ignore
+                }                
+                log.info("Elected as leader for the position of " + position + " + on host " + host);
                 leaderProvisioner.setRequiredState(LeaderState.I_AM_LEADER);
             }
 

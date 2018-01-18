@@ -133,6 +133,12 @@
       <artifactId>hbase-server</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.codahale.metrics</groupId>
+          <artifactId>metrics-core</artifactId>
+        </exclusion>
+      </exclusions>      
     </dependency>
 
     <dependency>

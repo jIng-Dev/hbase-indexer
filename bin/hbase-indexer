@@ -250,6 +250,7 @@ if [[ $client ]]; then
 else
 	HBASE_INDEXER_OPTS="$HBASE_INDEXER_OPTS $SERVER_GC_OPTS"
 fi
+HBASE_INDEXER_OPTS="$HBASE_INDEXER_OPTS -Dorg.apache.hadoop.hbase.shaded.io.netty.packagePrefix=org.apache.hadoop.hbase.shaded."
 
 # figure out which class to run
 if [ "$COMMAND" = "server" ] ; then

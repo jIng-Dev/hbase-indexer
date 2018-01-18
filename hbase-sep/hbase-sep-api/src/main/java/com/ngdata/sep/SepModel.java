@@ -35,12 +35,12 @@ public interface SepModel {
      * 
      * @throws IllegalStateException if a subscription by that name already exists.
      */
-    void addSubscription(String name) throws InterruptedException, KeeperException, IOException;
+    void addSubscription(String name, String... tableNames) throws InterruptedException, KeeperException, IOException;
 
     /**
      * Adds a subscription, doesn't fail if a subscription by that name exists.
      */
-    boolean addSubscriptionSilent(String name) throws InterruptedException, KeeperException, IOException;
+    boolean addSubscriptionSilent(String name, String... tableNames) throws InterruptedException, KeeperException, IOException;
 
     /**
      * Removes a subscription.

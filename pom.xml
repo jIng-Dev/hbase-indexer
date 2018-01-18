@@ -47,6 +47,7 @@
         
     <version.surefire.plugin>2.19.1</version.surefire.plugin>
     <version.failsafe.plugin>${version.surefire.plugin}</version.failsafe.plugin>
+    <skip.surefire.tests>${skipTests}</skip.surefire.tests>
 
     <!-- Tells maven plugins what file encoding to use -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -935,6 +936,9 @@
                -->
               <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
             </systemPropertyVariables>
+            <!-- skips surefire tests without skipping failsafe tests.
+                 Property value seems to magically default to false -->
+            <skipTests>${skip.surefire.tests}</skipTests>            
           </configuration>
         </plugin>
 

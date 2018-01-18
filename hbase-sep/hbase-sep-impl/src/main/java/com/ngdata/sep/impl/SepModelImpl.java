@@ -17,7 +17,9 @@ package com.ngdata.sep.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.ngdata.sep.util.zookeeper.ZkUtil;
@@ -28,6 +30,7 @@ import com.ngdata.sep.SepModel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -69,14 +72,14 @@ public class SepModelImpl implements SepModel {
     }
 
     @Override
-    public void addSubscription(String name) throws InterruptedException, KeeperException, IOException {
-        if (!addSubscriptionSilent(name)) {
-            throw new IllegalStateException("There is already a subscription for name '" + name + "'.");
-        }
+    public void addSubscription(String name, String... tableNames) throws InterruptedException, KeeperException, IOException {
+      if (!addSubscriptionSilent(name, tableNames)) {
+          throw new IllegalStateException("There is already a subscription for name '" + name + "'.");
+      }
     }
 
     @Override
-    public boolean addSubscriptionSilent(String name) throws InterruptedException, KeeperException, IOException {
+    public boolean addSubscriptionSilent(String name, String... tableNames) throws InterruptedException, KeeperException, IOException {
         Admin admin = ConnectionFactory.createConnection(hbaseConf).getAdmin();
         try {
             String internalName = toInternalSubscriptionName(name);
@@ -88,12 +91,44 @@ public class SepModelImpl implements SepModel {
 
             String basePath = baseZkPath + "/" + internalName;
             UUID uuid = UUID.nameUUIDFromBytes(Bytes.toBytes(internalName)); // always gives the same uuid for the same name
+            log.debug("Before addReplicationPeer - registering /hbaseid and /rs for basePath=" + basePath);
             ZkUtil.createPath(zk, basePath + "/hbaseid", Bytes.toBytes(uuid.toString()));
             ZkUtil.createPath(zk, basePath + "/rs");
 
 
             try {
-                admin.addReplicationPeer(internalName, new ReplicationPeerConfig().setClusterKey(zkQuorumString + ":" + zkClientPort + ":" + basePath));
+                ReplicationPeerConfig peerConfig = new ReplicationPeerConfig()
+                    .setClusterKey(zkQuorumString + ":" + zkClientPort + ":" + basePath);
+                if (tableNames.length > 0) {
+                    /*
+                     * CDH-62730: Performance Enhancement: It is much more efficient to filter away events
+                     * from irrelevant tables already on the hbase source cluster, i.e. as early as possible.
+                     * This can drastically reduce the traffic across the wire from source hbase cluster to
+                     * hbase-indexer. Without this patch each indexer receives all updates from all hbase
+                     * tables, regardless of whether these tables are actually indexed or not.
+                     * 
+                     * Consider the case where many HBase tables are indexed by many indexers to many distinct
+                     * Solr collections, for example one HBase table into one distinct Solr collection, for
+                     * each of N=100 indexers definitions. Before this patch each update to ANY HBase table
+                     * caused an event to be sent across the wire to EACH OF the N indexers. After this patch
+                     * each update to an HBase table causes an event to be sent across the wire to *one* of
+                     * the N indexers, the one indexer that's actually interested in updates for this
+                     * particular HBase table.
+                     * 
+                     * Unfortunately, for the time being we can only do this performance improvement if the
+                     * table name is not a regex, i.e. if the table name in the hbase indexer definition xml
+                     * file does not start with "regex:", for example "regex:user.*". If it is a regex then
+                     * performance remains unchanged.
+                     */
+                    Map<TableName, List<String>> tablesToReplicate = new HashMap();
+                    for (String tableName : tableNames) {
+                        List<String> columnFamilies = new ArrayList(); // this means replicate all colFamilies
+                        tablesToReplicate.put(TableName.valueOf(tableName), columnFamilies);
+                    }
+                    peerConfig.setReplicateAllUserTables(false);
+                    peerConfig.setTableCFsMap(tablesToReplicate);
+                }
+                admin.addReplicationPeer(internalName, peerConfig);
             } catch (IllegalArgumentException e) {
                 if (e.getMessage().equals("Cannot add existing peer")) {
                     return false;
@@ -109,6 +144,7 @@ public class SepModelImpl implements SepModel {
                     throw new IOException(e);
                 }
             }
+            log.debug("Finished addReplicationPeer with clusterkey=" + zkQuorumString + ":" + zkClientPort + ":" + basePath);
 
             return true;
         } finally {
@@ -129,6 +165,7 @@ public class SepModelImpl implements SepModel {
         Admin admin = ConnectionFactory.createConnection(hbaseConf).getAdmin();
         try {
             String internalName = toInternalSubscriptionName(name);
+            log.debug("Initiating removeReplicationPeer with " + internalName);
             List<String> peerIds = new ArrayList<String>();
             for (ReplicationPeerDescription peer : admin.listReplicationPeers()) {
                 peerIds.add(peer.getPeerId());
@@ -137,6 +174,7 @@ public class SepModelImpl implements SepModel {
                 log.error("Requested to remove a subscription which does not exist, skipping silently: '" + name + "'");
                 return false;
             } else {
+                log.debug("Before removeReplicationPeer with " + internalName);
                 try {
                     admin.removeReplicationPeer(internalName);
                 } catch (IllegalArgumentException e) {
@@ -150,6 +188,8 @@ public class SepModelImpl implements SepModel {
                 }
             }
             String basePath = baseZkPath + "/" + internalName;
+            log.debug("After removeReplicationPeer with " + internalName);
+            log.debug("Before removeReplicationPeer deletion of zk node " + basePath);
             try {
                 ZkUtil.deleteNode(zk, basePath + "/hbaseid");
                 for (String child : zk.getChildren(basePath + "/rs", false)) {
@@ -163,6 +203,7 @@ public class SepModelImpl implements SepModel {
             } catch (KeeperException ke) {
                 log.error("Cleanup in zookeeper failed on " + basePath, ke);
             }
+            log.debug("After removeReplicationPeer deletion of zk node " + basePath);
             return true;
         } finally {
             Closer.close(admin.getConnection());

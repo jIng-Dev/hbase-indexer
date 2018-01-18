@@ -67,11 +67,22 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-mapreduce</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-mapreduce</artifactId>
       <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minicluster</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -157,6 +168,10 @@
         <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.codahale.metrics</groupId>
+          <artifactId>metrics-core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -443,6 +458,10 @@
              -->
             <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
           </systemPropertyVariables>
+          <excludes>
+            <exclude>${excludeTests.hbase.indexer.mr}</exclude>
+            <!-- Example usage: mvn -DexcludeTests.hbase.indexer.mr='**/*Test.java' -DfailIfNoTests=false clean test -->
+          </excludes>
         </configuration>
       </plugin>
 

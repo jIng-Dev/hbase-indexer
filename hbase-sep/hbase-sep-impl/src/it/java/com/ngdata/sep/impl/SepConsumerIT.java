@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -60,7 +62,8 @@ import static org.junit.Assert.assertNull;
 
 public class SepConsumerIT {
 
-    private static final byte[] TABLE_NAME = Bytes.toBytes("test_table");
+    private static final String TABLE_NAME_STRING = "test_table";
+    private static final byte[] TABLE_NAME = Bytes.toBytes(TABLE_NAME_STRING);
     private static final byte[] DATA_COL_FAMILY = Bytes.toBytes("datacf");
     private static final byte[] PAYLOAD_COL_FAMILY = Bytes.toBytes("payloadcf");
     private static final byte[] PAYLOAD_COL_QUALIFIER = Bytes.toBytes("payload_qualifier");
@@ -82,6 +85,7 @@ public class SepConsumerIT {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
+        LogManager.getLogger(Class.forName("org.apache.hadoop.hbase.client.ConnectionImplementation")).setLevel(Level.ERROR);
         clusterConf = HBaseConfiguration.create();
         
         // HACK disabled because always on in hbase-2 (see HBASE-16040)
@@ -121,15 +125,18 @@ public class SepConsumerIT {
     @Before
     public void setUp() throws ZkConnectException, InterruptedException, KeeperException, IOException {
         zkItf = ZkUtil.connect("localhost:" + hbaseTestUtil.getZkCluster().getClientPort(), 30000);
+        clusterConf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, hbaseTestUtil.getZkCluster().getClientPort());
         sepModel = new SepModelImpl(zkItf, clusterConf);
-        sepModel.addSubscription(SUBSCRIPTION_NAME);
-        sepModel.addSubscription(SUBSCRIPTION_WITH_PAYLOADS_NAME);
+        sepModel.addSubscription(SUBSCRIPTION_NAME, TABLE_NAME_STRING);
+        sepModel.addSubscription(SUBSCRIPTION_WITH_PAYLOADS_NAME, TABLE_NAME_STRING);
         eventListener = new TestEventListener();
         eventListenerWithPayloads = new TestEventListener();
         sepConsumer = new SepConsumer(SUBSCRIPTION_NAME, System.currentTimeMillis(), eventListener, 3, "localhost",
                 zkItf, clusterConf);
         PayloadExtractor payloadExtractor = new BasePayloadExtractor(TABLE_NAME, PAYLOAD_COL_FAMILY, PAYLOAD_COL_QUALIFIER);
-        sepConsumerWithPayloads = new SepConsumer(SUBSCRIPTION_WITH_PAYLOADS_NAME, System.currentTimeMillis(), eventListenerWithPayloads, 3, "localhost", zkItf, clusterConf, payloadExtractor);
+        sepConsumerWithPayloads = new SepConsumer(SUBSCRIPTION_WITH_PAYLOADS_NAME, System.currentTimeMillis(), 
+            eventListenerWithPayloads, 3, "localhost", zkItf, clusterConf, payloadExtractor, 
+            TableNamePredicates.getTableNamePredicate(TABLE_NAME_STRING, false));
         sepConsumer.start();
         sepConsumerWithPayloads.start();
     }

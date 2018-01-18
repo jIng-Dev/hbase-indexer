@@ -18,6 +18,7 @@ package com.ngdata.hbaseindexer.master;
 import static com.ngdata.hbaseindexer.model.api.IndexerModelEventType.INDEXER_ADDED;
 import static com.ngdata.hbaseindexer.model.api.IndexerModelEventType.INDEXER_UPDATED;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -43,6 +44,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.ngdata.hbaseindexer.ConfKeys;
 import com.ngdata.hbaseindexer.SolrConnectionParams;
+import com.ngdata.hbaseindexer.conf.IndexerComponentFactory;
+import com.ngdata.hbaseindexer.conf.IndexerComponentFactoryUtil;
+import com.ngdata.hbaseindexer.conf.IndexerConf;
 import com.ngdata.hbaseindexer.model.api.BatchBuildInfo;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinition;
 import com.ngdata.hbaseindexer.model.api.IndexerDefinition.BatchIndexingState;
@@ -239,7 +243,16 @@ public class IndexerMaster {
                     // due to concurrent operations (e.g. someone deleting this subscription right after we
                     // created it).
                     String subscriptionId = subscriptionId(indexer.getName());
-                    sepModel.addSubscription(subscriptionId);
+
+                    IndexerComponentFactory factory = IndexerComponentFactoryUtil.getComponentFactory(indexer.getIndexerComponentFactory(), new ByteArrayInputStream(indexer.getConfiguration()), indexer.getConnectionParams());
+                    IndexerConf indexerConf = factory.createIndexerConf();
+                    if (indexerConf.tableNameIsRegex()) {
+                        // TODO: perf enhancement: consider fetching all hbase table names and here only pass in the table names that match the regex?
+                        sepModel.addSubscription(subscriptionId);
+                    } else {                     
+                        sepModel.addSubscription(subscriptionId, indexerConf.getTable());
+                    }
+
                     indexer = new IndexerDefinitionBuilder().startFrom(indexer).subscriptionId(subscriptionId).build();
                     indexerModel.updateIndexerInternal(indexer);
                     log.info("Assigned subscription ID '" + subscriptionId + "' to indexer '" + indexerName + "'");
@@ -410,14 +423,17 @@ public class IndexerMaster {
         try {
             // Read current situation of record and assure it is still actual
             IndexerDefinition indexer = indexerModel.getFreshIndexer(indexerName);
+            log.debug("EventWorker indexer.getLifecycleState: " + indexer.getLifecycleState());
             if (indexer.getLifecycleState() == IndexerDefinition.LifecycleState.DELETE_REQUESTED) {
                 canBeDeleted = true;
 
                 String queueSubscriptionId = indexer.getSubscriptionId();
+                log.debug("EventWorker before removeSubscription for " + queueSubscriptionId);
                 if (queueSubscriptionId != null) {
                     sepModel.removeSubscription(indexer.getSubscriptionId());
                     // We leave the subscription ID in the indexer definition FYI
                 }
+                log.debug("EventWorker after removeSubscription for " + queueSubscriptionId);
 
                 if (indexer.getActiveBatchBuildInfo() != null) {
                     JobClient jobClient = getJobClient();
@@ -551,6 +567,7 @@ public class IndexerMaster {
                         log.warn("EventWorker queue getting large, size = " + queueSize);
                     }
 
+                    log.debug("EventWorker received event type = " + event.getType());
                     if (event.getType() == INDEXER_ADDED || event.getType() == INDEXER_UPDATED) {
                         IndexerDefinition indexer = null;
                         try {
@@ -559,10 +576,13 @@ public class IndexerMaster {
                             // ignore, indexer has meanwhile been deleted, we will get another event for this
                         }
 
+                        log.debug("EventWorker indexer isNull:" + (indexer == null));
                         if (indexer != null) {
                             if (indexer.getLifecycleState() == IndexerDefinition.LifecycleState.DELETE_REQUESTED ||
                                     indexer.getLifecycleState() == IndexerDefinition.LifecycleState.DELETING) {
+                                log.debug("EventWorker before prepareDeleteIndex " + indexer.getName());
                                 prepareDeleteIndex(indexer.getName());
+                                log.debug("EventWorker after prepareDeleteIndex " + indexer.getName());
                                 for (IndexerLifecycleListener lifecycleListener : lifecycleListeners) {
                                     lifecycleListener.onDelete(indexer);
                                 }

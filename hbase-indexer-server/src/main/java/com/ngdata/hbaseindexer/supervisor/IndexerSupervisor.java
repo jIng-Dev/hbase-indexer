@@ -60,6 +60,7 @@ import com.ngdata.hbaseindexer.model.api.IndexerProcessRegistry;
 import com.ngdata.hbaseindexer.parse.ResultToSolrMapper;
 import com.ngdata.hbaseindexer.util.solr.SolrConnectionParamUtil;
 import com.ngdata.sep.impl.SepConsumer;
+import com.ngdata.sep.impl.TableNamePredicates;
 import com.ngdata.sep.util.io.Closer;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 import org.apache.commons.logging.Log;
@@ -234,7 +235,8 @@ public class IndexerSupervisor {
             int threads = hbaseConf.getInt("hbaseindexer.indexer.threads", 10);
             SepConsumer sepConsumer = new SepConsumer(indexerDef.getSubscriptionId(),
                     indexerDef.getSubscriptionTimestamp(), eventListener, threads, hostName,
-                    zk, hbaseConf, null);
+                    zk, hbaseConf, null, 
+                    TableNamePredicates.getTableNamePredicate(indexerConf.getTable(), indexerConf.tableNameIsRegex()));
 
             handle = new IndexerHandle(indexerDef, indexer, sepConsumer, solr, connectionManager);
             handle.start();

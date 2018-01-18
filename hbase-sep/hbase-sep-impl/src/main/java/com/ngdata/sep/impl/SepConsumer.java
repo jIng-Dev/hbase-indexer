@@ -15,52 +15,51 @@
  */
 package com.ngdata.sep.impl;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import com.ngdata.sep.EventListener;
-import com.ngdata.sep.PayloadExtractor;
-import com.ngdata.sep.SepEvent;
-import com.ngdata.sep.SepModel;
-import com.ngdata.sep.util.concurrent.WaitPolicy;
-import com.ngdata.sep.util.io.Closer;
-import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
-
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.ngdata.sep.EventListener;
+import com.ngdata.sep.PayloadExtractor;
+import com.ngdata.sep.SepEvent;
+import com.ngdata.sep.SepModel;
+import com.ngdata.sep.util.concurrent.WaitPolicy;
+import com.ngdata.sep.util.zookeeper.ZkUtil;
+import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 
 /**
  * SepConsumer consumes the events for a certain SEP subscription and dispatches
@@ -72,21 +71,24 @@ import java.util.concurrent.TimeUnit;
  * hbase regionserver") to which the regionservers in the hbase master cluster
  * connect to replicate log entries.</p>
  */
-public class SepConsumer extends BaseHRegionServer {
+public class SepConsumer {
     private final String subscriptionId;
-    private long subscriptionTimestamp;
-    private EventListener listener;
+    private final long subscriptionTimestamp;
+    private final EventListener listener;
     private final ZooKeeperItf zk;
     private final Configuration hbaseConf;
-    private RpcServer rpcServer;
-    private ServerName serverName;
-    private ZKWatcher zkWatcher;
-    private SepMetrics sepMetrics;
+    private final HRegionServer regionServer;
+    private final ServerName serverName;
+    private final SepMetrics sepMetrics;
     private final PayloadExtractor payloadExtractor;
     private String zkNodePath;
-    private List<ThreadPoolExecutor> executors;
-    boolean running = false;
-    private Log log = LogFactory.getLog(getClass());
+    private final List<ThreadPoolExecutor> executors;
+    private final Predicate<TableName> tableNamePredicate;
+    private boolean running = false;
+    private final Log log = LogFactory.getLog(getClass());
+
+    private static final String MASTERLESS_ROOT_ZK_PATH = "/ngdata/sep/hbase-masterless";
+    private static final String MASTERLESS_ZK_DIR_SUFFIX = "hbaseindexer.masterless.zkDirSuffix";
 
     /**
      * @param subscriptionTimestamp timestamp of when the index subscription became active (or more accurately, not
@@ -100,7 +102,7 @@ public class SepConsumer extends BaseHRegionServer {
      */
     public SepConsumer(String subscriptionId, long subscriptionTimestamp, EventListener listener, int threadCnt,
             String hostName, ZooKeeperItf zk, Configuration hbaseConf) throws IOException, InterruptedException {
-        this(subscriptionId, subscriptionTimestamp, listener, threadCnt, hostName, zk, hbaseConf, null);
+        this(subscriptionId, subscriptionTimestamp, listener, threadCnt, hostName, zk, hbaseConf, null, null);
     }
 
     /**
@@ -112,7 +114,8 @@ public class SepConsumer extends BaseHRegionServer {
      * @param payloadExtractor      extracts payloads to include in SepEvents
      */
     public SepConsumer(String subscriptionId, long subscriptionTimestamp, EventListener listener, int threadCnt,
-            String hostName, ZooKeeperItf zk, Configuration hbaseConf, PayloadExtractor payloadExtractor) throws IOException, InterruptedException {
+            String hostName, ZooKeeperItf zk, Configuration hbaseConf, PayloadExtractor payloadExtractor, 
+            Predicate<TableName> tableNamePredicate) throws IOException, InterruptedException {
         Preconditions.checkArgument(threadCnt > 0, "Thread count must be > 0");
         this.subscriptionId = SepModelImpl.toInternalSubscriptionName(subscriptionId);
         this.subscriptionTimestamp = subscriptionTimestamp;
@@ -122,31 +125,43 @@ public class SepConsumer extends BaseHRegionServer {
         this.sepMetrics = new SepMetrics(subscriptionId);
         this.payloadExtractor = payloadExtractor;
         this.executors = Lists.newArrayListWithCapacity(threadCnt);
-
-        InetSocketAddress initialIsa = new InetSocketAddress(hostName, 0);
-        if (initialIsa.getAddress() == null) {
-            throw new IllegalArgumentException("Failed resolve of " + initialIsa);
+        if (tableNamePredicate == null) {
+            tableNamePredicate = TableNamePredicates.getAlwaysMatchingTableNamePredicate();
         }
-        String name = "regionserver/" + initialIsa.toString();
-        this.rpcServer = org.apache.hadoop.hbase.ipc.RpcServerFactory.createRpcServer(this, name, getServices(),
-        /*HBaseRPCErrorHandler.class, OnlineRegions.class},*/
-                initialIsa, // BindAddress is IP we got for this server.
-                //hbaseConf.getInt("hbase.regionserver.handler.count", 10),
-                //hbaseConf.getInt("hbase.regionserver.metahandler.count", 10),
-                hbaseConf,
-                new FifoRpcScheduler(hbaseConf, hbaseConf.getInt("hbase.regionserver.handler.count", 10)));
-          /*
-          new SimpleRpcScheduler(
-            hbaseConf,
-            hbaseConf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT),
-            hbaseConf.getInt("hbase.regionserver.metahandler.count", 10),
-            hbaseConf.getInt("hbase.regionserver.handler.count", 10),
-            this,
-            HConstants.QOS_THRESHOLD)
-          );
-          */
-        this.serverName = ServerName.valueOf(hostName, rpcServer.getListenerAddress().getPort(), System.currentTimeMillis());
-        this.zkWatcher = new ZKWatcher(hbaseConf, this.serverName.toString(), null);
+        this.tableNamePredicate = tableNamePredicate;
+
+        Configuration masterlessConf = HBaseConfiguration.create();
+        masterlessConf.addResource("hbase-indexer-site-masterless-defaults.xml");
+        masterlessConf.addResource("hbase-indexer-site.xml"); // allow custom overrides, also see HBaseIndexerConfiguration.addHbaseIndexerResources
+        masterlessConf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL, SepConnection.class.getName());
+        masterlessConf.set(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY, SepWALEntrySinkFilter.class.getName());        
+        
+        final String masterlessZkDirSuffix = masterlessConf.get(MASTERLESS_ZK_DIR_SUFFIX);
+        final String masterlessZkPath;
+        if (masterlessZkDirSuffix == null) {
+            masterlessZkPath = MASTERLESS_ROOT_ZK_PATH;
+        } else {
+            masterlessZkPath = MASTERLESS_ROOT_ZK_PATH + masterlessZkDirSuffix.trim();
+        }
+        masterlessConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, masterlessZkPath);
+        log.info("Creating masterless RegionServer using " + HConstants.ZOOKEEPER_ZNODE_PARENT + ":" + masterlessZkPath);
+        
+        masterlessConf.setInt(HConstants.REGIONSERVER_PORT, 0); // let the system pick up an ephemeral port
+        
+        // copy zk client port to enable testing on non-standard ports
+        String zkClientPort = hbaseConf.get(HConstants.ZOOKEEPER_CLIENT_PORT);
+        if (zkClientPort != null) {
+          masterlessConf.set(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);              
+        }
+        
+        // hacky way to pass non-primitive params to SepConnection, also see start() and stop()
+        masterlessConf.set(SepConnection.SUBSCRIPTION_ID_PARAM_NAME, subscriptionId);
+  
+        // HBASE-19804 setMiniClusterMode(true) hack to allow multiple HRegionServer per JVM even in non-unit tests
+        DefaultMetricsSystem.setMiniClusterMode(true);
+
+        this.regionServer = new HRegionServer(masterlessConf);        
+        this.serverName = regionServer.getServerName();
 
         // login the zookeeper client principal (if using security)
         ZKUtil.loginClient(hbaseConf, "hbase.zookeeper.client.keytab.file",
@@ -164,31 +179,37 @@ public class SepConsumer extends BaseHRegionServer {
         }
     }
 
-    public void start() throws IOException, InterruptedException, KeeperException {
-
-        rpcServer.start();
+    public void start() throws InterruptedException, KeeperException {
+        // hacky way to pass non-primitive params to SepConnection
+        SepConnection.PARAMS_MAP.put(subscriptionId, 
+            new SepConnectionParams(tableNamePredicate, subscriptionTimestamp, this));
+        
+        Thread thread = new Thread() {            
+            @Override
+            public void run() {
+                regionServer.run();
+            }
+        };
+        thread.setDaemon(true);
+        thread.start();
+        regionServer.waitForServerOnline();
 
         // Publish our existence in ZooKeeper
         zkNodePath = hbaseConf.get(SepModel.ZK_ROOT_NODE_CONF_KEY, SepModel.DEFAULT_ZK_ROOT_NODE)
                 + "/" + subscriptionId + "/rs/" + serverName.getServerName();
+        log.debug("Publishing our existence in zk at zkNodePathForSlave:" + zkNodePath);
         zk.create(zkNodePath, null, CreateMode.EPHEMERAL);
 
         this.running = true;
     }
 
-    private List<RpcServer.BlockingServiceAndInterface> getServices() {
-        List<RpcServer.BlockingServiceAndInterface> bssi = new ArrayList<RpcServer.BlockingServiceAndInterface>(1);
-        bssi.add(new RpcServer.BlockingServiceAndInterface(
-                AdminProtos.AdminService.newReflectiveBlockingService(this),
-                AdminProtos.AdminService.BlockingInterface.class));
-        return bssi;
-    }
-
     public void stop() {
-        Closer.close(zkWatcher);
         if (running) {
             running = false;
-            Closer.close(rpcServer);
+            if (regionServer != null) {
+                regionServer.stop("Stopping masterless regionserver for subscriptionId:" + subscriptionId);
+            }
+            SepConnection.PARAMS_MAP.remove(subscriptionId);
             try {
                 // This ZK node will likely already be gone if the index has been removed
                 // from ZK, but we'll try to remove it here to be sure
@@ -206,75 +227,64 @@ public class SepConsumer extends BaseHRegionServer {
         }
     }
 
-    public boolean isRunning() {
-        return running;
-    }
-
-    @Override
-    public AdminProtos.ReplicateWALEntryResponse replicateWALEntry(final RpcController controller,
-            final AdminProtos.ReplicateWALEntryRequest request) throws ServiceException {
-        try {
-
-            // TODO Recording of last processed timestamp won't work if two batches of log entries are sent out of order
-            long lastProcessedTimestamp = -1;
-
-            SepEventExecutor eventExecutor = new SepEventExecutor(listener, executors, 100, sepMetrics);
-
-            List<AdminProtos.WALEntry> entries = request.getEntryList();
-            CellScanner cells = ((HBaseRpcController)controller).cellScanner();
-
-            for (final AdminProtos.WALEntry entry : entries) {
-                TableName tableName = (entry.getKey().getWriteTime() < subscriptionTimestamp) ? null :
-                        TableName.valueOf(entry.getKey().getTableName().toByteArray());
-                Multimap<ByteBuffer, Cell> keyValuesPerRowKey = ArrayListMultimap.create();
-                final Map<ByteBuffer, byte[]> payloadPerRowKey = Maps.newHashMap();
-                int count = entry.getAssociatedCellCount();
-                for (int i = 0; i < count; i++) {
-                    if (!cells.advance()) {
-                        throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
-                    }
-
-                    // this signals to us that we simply need to skip over count of cells
-                    if (tableName == null) {
-                        continue;
-                    }
-
-                    Cell cell = cells.current();
-                    ByteBuffer rowKey = ByteBuffer.wrap(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-                    byte[] payload;
-                    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                    if (payloadExtractor != null && (payload = payloadExtractor.extractPayload(tableName.toBytes(), kv)) != null) {
-                        if (payloadPerRowKey.containsKey(rowKey)) {
-                            log.error("Multiple payloads encountered for row " + Bytes.toStringBinary(rowKey)
-                                    + ", choosing " + Bytes.toStringBinary(payloadPerRowKey.get(rowKey)));
-                        } else {
-                            payloadPerRowKey.put(rowKey, payload);
-                        }
-                    }
-                    keyValuesPerRowKey.put(rowKey, kv);
-                }
-
-                for (final ByteBuffer rowKeyBuffer : keyValuesPerRowKey.keySet()) {
-                    final List<Cell> keyValues = (List<Cell>) keyValuesPerRowKey.get(rowKeyBuffer);
-
-                    final SepEvent sepEvent = new SepEvent(tableName.toBytes(), CellUtil.cloneRow(keyValues.get(0)), keyValues,
-                            payloadPerRowKey.get(rowKeyBuffer));
-                    eventExecutor.scheduleSepEvent(sepEvent);
-                    lastProcessedTimestamp = Math.max(lastProcessedTimestamp, entry.getKey().getWriteTime());
-                }
-
-            }
-            List<Future<?>> futures = eventExecutor.flush();
-            waitOnSepEventCompletion(futures);
-
-            if (lastProcessedTimestamp > 0) {
-                sepMetrics.reportSepTimestamp(lastProcessedTimestamp);
-            }
-            return AdminProtos.ReplicateWALEntryResponse.newBuilder().build();
-        } catch (IOException ie) {
-            throw new ServiceException(ie);
+    void replicateBatch(List<? extends Row> actions, Object[] results, TableName tableName) 
+    throws IOException {
+        if (log.isDebugEnabled()) {
+          log.debug("replicateBatch() received " + actions.size() + " events from table " + tableName + " for subscriptionId "
+              + subscriptionId);
         }
-    }
+    
+        // TODO Recording of last processed timestamp won't work if two batches of log entries are sent out of order
+        long lastProcessedTimestamp = -1;
+        
+        SepEventExecutor eventExecutor = new SepEventExecutor(listener, executors, 100, sepMetrics);
+        
+        for (Row row : actions) {
+            if (!(row instanceof Mutation)) {
+                throw new RuntimeException("Unreachable code for row class: " + row.getClass().getName());
+            }
+            // Actually, ReplicationSink only feeds us Put and Delete objects anyway
+            Mutation mutation = (Mutation) row;
+            
+            final Multimap<ByteBuffer, Cell> keyValuesPerRowKey = ArrayListMultimap.create();
+            final Map<ByteBuffer, byte[]> payloadPerRowKey = Maps.newHashMap();
+            
+            CellScanner cells = mutation.cellScanner();
+            while (cells.advance()) {
+                Cell cell = cells.current();
+                if (cell.getTimestamp() < subscriptionTimestamp) {
+                    continue; // TODO: replace with SepWALEntrySinkFilter API
+                }
+                lastProcessedTimestamp = Math.max(lastProcessedTimestamp, cell.getTimestamp());
+                ByteBuffer rowKey = ByteBuffer.wrap(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+                byte[] payload;
+                KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+                if (payloadExtractor != null && (payload = payloadExtractor.extractPayload(tableName.toBytes(), kv)) != null) {
+                    if (payloadPerRowKey.containsKey(rowKey)) {
+                        log.error("Multiple payloads encountered for row " + Bytes.toStringBinary(rowKey)
+                                + ", choosing " + Bytes.toStringBinary(payloadPerRowKey.get(rowKey)));
+                    } else {
+                        payloadPerRowKey.put(rowKey, payload);
+                    }
+                }
+                keyValuesPerRowKey.put(rowKey, kv);
+            }
+            for (final ByteBuffer rowKeyBuffer : keyValuesPerRowKey.keySet()) {
+                final List<Cell> keyValues = (List<Cell>) keyValuesPerRowKey.get(rowKeyBuffer);
+      
+                final SepEvent sepEvent = new SepEvent(tableName.toBytes(), CellUtil.cloneRow(keyValues.get(0)), keyValues,
+                        payloadPerRowKey.get(rowKeyBuffer));
+                eventExecutor.scheduleSepEvent(sepEvent);
+            }
+          }
+    
+          List<Future<?>> futures = eventExecutor.flush();
+          waitOnSepEventCompletion(futures);
+    
+          if (lastProcessedTimestamp > 0) {
+              sepMetrics.reportSepTimestamp(lastProcessedTimestamp);
+          }
+    } 
 
     private void waitOnSepEventCompletion(List<Future<?>> futures) throws IOException {
         // We should wait for all operations to finish before returning, because otherwise HBase might
@@ -301,21 +311,6 @@ public class SepConsumer extends BaseHRegionServer {
                     + " total batches)");
             throw new RuntimeException(exceptionsThrown.get(0));
         }
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-        return hbaseConf;
-    }
-
-    @Override
-    public ServerName getServerName() {
-        return serverName;
-    }
-
-    @Override
-    public ZKWatcher getZooKeeper() {
-        return zkWatcher;
     }
 
 }

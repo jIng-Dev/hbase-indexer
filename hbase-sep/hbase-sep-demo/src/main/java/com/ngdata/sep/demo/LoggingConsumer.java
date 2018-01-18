@@ -52,7 +52,7 @@ public class LoggingConsumer {
                 Bytes.toBytes("payload"));
 
         SepConsumer sepConsumer = new SepConsumer(subscriptionName, 0, new EventLogger(), 1, "localhost", zk, conf,
-                payloadExtractor);
+                payloadExtractor, null);
 
         sepConsumer.start();
         System.out.println("Started");

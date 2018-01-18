@@ -201,6 +201,12 @@
         <groupId>org.apache.sentry</groupId>
         <artifactId>sentry-binding-hbase-indexer</artifactId>
         <version>${version.sentry-binding-hbase-indexer}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.sentry</groupId>
+            <artifactId>sentry-provider-db</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.solr</groupId>

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntrySinkFilter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -252,9 +253,6 @@ public class SepConsumer {
             CellScanner cells = mutation.cellScanner();
             while (cells.advance()) {
                 Cell cell = cells.current();
-                if (cell.getTimestamp() < subscriptionTimestamp) {
-                    continue; // TODO: replace with SepWALEntrySinkFilter API
-                }
                 lastProcessedTimestamp = Math.max(lastProcessedTimestamp, cell.getTimestamp());
                 ByteBuffer rowKey = ByteBuffer.wrap(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
                 byte[] payload;

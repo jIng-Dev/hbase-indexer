@@ -17,9 +17,14 @@ package com.ngdata.sep.impl;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntrySinkFilter;
 
 import com.google.common.base.Preconditions;
 
+/**
+ * A facility to filter out all replication WAL entries that arrive from irrelevant hbase source
+ * tables or that stem from a time before an indexer was created.
+ */
 public final class SepWALEntrySinkFilter implements WALEntrySinkFilter {
 
     private SepConnectionParams params;

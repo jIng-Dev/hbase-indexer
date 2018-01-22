@@ -125,8 +125,6 @@ public class MasterlessReplicationIT {
 
   @Before
   public void setUp() throws Exception {
-    ZkUtil.createPath(zkItf, MASTERLESS_ROOT_ZK_PATH + "/rs"); // delta - required for correct operation !!!
-
     int numPeers = 2;
 //    int numPeers = 1;
     for (int i = 0; i < numPeers; i++) {

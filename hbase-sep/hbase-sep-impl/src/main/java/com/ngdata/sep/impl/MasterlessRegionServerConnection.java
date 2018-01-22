@@ -78,11 +78,6 @@ abstract class MasterlessRegionServerConnection implements Connection {
   abstract protected void replicateBatch(List<? extends Row> actions, Object[] results, TableName tableName) 
       throws IOException, InterruptedException;
   
-  /** Default implementation simply returns true */
-  protected boolean isRelevantTable(TableName tableName) {
-    return true;
-  }
-  
   @Override 
   public void abort(String why, Throwable e) {} 
 
@@ -132,9 +127,6 @@ abstract class MasterlessRegionServerConnection implements Connection {
       throw new RuntimeException("IndexerConnection is closed."); 
     } 
     final Configuration passedInConfiguration = getConfiguration();
-    if (!isRelevantTable(tn)) {
-      return new NoopTableBuilder(passedInConfiguration, tn);
-    }
     
     return new TableBuilder() { 
       @Override 

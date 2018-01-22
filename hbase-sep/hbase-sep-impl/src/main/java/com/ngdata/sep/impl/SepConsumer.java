@@ -59,7 +59,6 @@ import com.ngdata.sep.PayloadExtractor;
 import com.ngdata.sep.SepEvent;
 import com.ngdata.sep.SepModel;
 import com.ngdata.sep.util.concurrent.WaitPolicy;
-import com.ngdata.sep.util.zookeeper.ZkUtil;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 
 /**

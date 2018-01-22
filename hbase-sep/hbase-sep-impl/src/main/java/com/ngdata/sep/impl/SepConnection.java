@@ -55,12 +55,6 @@ final class SepConnection extends MasterlessRegionServerConnection {
   }
   
   @Override
-  protected boolean isRelevantTable(TableName tableName) {
-    return (params.getTableNamePredicate() == null 
-        || params.getTableNamePredicate().apply(tableName));
-  }
-  
-  @Override
   protected void replicateBatch(List<? extends Row> actions, Object[] results, TableName tableName) 
       throws IOException, InterruptedException {
     params.getSepConsumer().replicateBatch(actions, results, tableName);

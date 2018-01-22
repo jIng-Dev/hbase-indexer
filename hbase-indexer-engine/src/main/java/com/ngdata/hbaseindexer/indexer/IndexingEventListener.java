@@ -17,7 +17,6 @@ package com.ngdata.hbaseindexer.indexer;
 
 import static com.ngdata.hbaseindexer.metrics.IndexerMetricsUtil.metricName;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;

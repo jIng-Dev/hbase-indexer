@@ -31,10 +31,12 @@ import jersey.repackaged.com.google.common.base.Preconditions;
 
 
 /**
- * The SEP hbase-indexer catches the replication stream in replicateBatch() 
- * so it can insert into the Solr index.
+ * This class receives the replication stream/events of a region server of the HBase slave cluster
+ * in method replicateBatch() and forwards the events to the {@link SepConsumer}, which can then
+ * apply corresponding insert/update/delete operations to a Lucene/Solr index to keep the index in
+ * sync with the state of the underlying HBase table.
  */ 
-final class SepConnection extends MasterlessRegionServerConnection { 
+final class SepConnection extends ReplicationSlaveConnection { 
   
   public static final String SUBSCRIPTION_ID_PARAM_NAME = "SepConnection-subscriptionId";
 
@@ -43,11 +45,22 @@ final class SepConnection extends MasterlessRegionServerConnection {
   
   private final SepConnectionParams params;
 
+  /** This constructor will be called by the slave region server ReplicationSink.batch() */
   public SepConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
     super(conf, pool, user);
     String subscriptionId = conf.get(SUBSCRIPTION_ID_PARAM_NAME);
     this.params = PARAMS_MAP.get(subscriptionId);
     Preconditions.checkNotNull(this.params);
+    
+    /*
+     * The following approach to pass non-primitive params to a SepConnection doesn't work because
+     * the ReplicationSink constructor decorates conf object into another conf object, so the
+     * original conf object becomes unreachable to us here:
+     * 
+     * this.params = ((SepConfiguration) conf).getSepConnectionParams();
+     * 
+     * where SepConfiguration extends Configuration
+     */
   }
   
   SepConnectionParams getParams() {

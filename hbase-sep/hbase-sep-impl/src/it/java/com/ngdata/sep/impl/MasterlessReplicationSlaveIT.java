@@ -57,7 +57,7 @@ import org.junit.Test;
 import com.ngdata.sep.util.zookeeper.ZkUtil;
 import com.ngdata.sep.util.zookeeper.ZooKeeperItf;
 
-public class MasterlessReplicationIT {
+public class MasterlessReplicationSlaveIT {
 
   private static final byte[] TABLE_NAME = Bytes.toBytes("test_table");
   private static final byte[] DATA_COL_FAMILY = Bytes.toBytes("datacf");
@@ -76,7 +76,7 @@ public class MasterlessReplicationIT {
   private static Admin admin;
   private static ZooKeeperItf zkItf;
   
-  private static final Log log = LogFactory.getLog(MasterlessReplicationIT.class);
+  private static final Log log = LogFactory.getLog(MasterlessReplicationSlaveIT.class);
 
   private List<HRegionServer> regionServers = new ArrayList<HRegionServer>();
   private List<String> replicationPeerIds = new ArrayList<String>();
@@ -133,7 +133,7 @@ public class MasterlessReplicationIT {
       Configuration masterlessConf = HBaseConfiguration.create();
       masterlessConf.addResource("hbase-indexer-site-masterless-defaults.xml");
       masterlessConf.addResource("hbase-indexer-site.xml"); // allow custom overrides, also see HBaseIndexerConfiguration.addHbaseIndexerResources
-      masterlessConf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL, MasterlessDummyConnection.class.getName());
+      masterlessConf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL, CountingReplicationSlaveConnection.class.getName());
       masterlessConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, MASTERLESS_ROOT_ZK_PATH);
       masterlessConf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, hbaseTestUtil.getZkCluster().getClientPort());
       masterlessConf.setInt(HConstants.REGIONSERVER_PORT, 0); // let the system pick up an ephemeral port
@@ -208,19 +208,19 @@ public class MasterlessReplicationIT {
     // verify that the rows are replicated and now appear in the slave hbase table
     int expectedNumEvents = 3 * replicationPeerIds.size();
     waitForEvents(expectedNumEvents); 
-    Assert.assertEquals(expectedNumEvents, MasterlessDummyConnection.NUM_RECEIVED_ACTIONS.get());
-    log.info("receivedRowKeys=" + MasterlessDummyConnection.RECEIVED_ROW_KEYS);
-    log.info("receivedCellValues=" + MasterlessDummyConnection.RECEIVED_CELL_VALUES);
-    Assert.assertEquals(expectedNumEvents, MasterlessDummyConnection.RECEIVED_ROW_KEYS.size());
-    Assert.assertEquals(expectedNumEvents, MasterlessDummyConnection.RECEIVED_CELL_VALUES.size());
+    Assert.assertEquals(expectedNumEvents, CountingReplicationSlaveConnection.NUM_RECEIVED_ACTIONS.get());
+    log.info("receivedRowKeys=" + CountingReplicationSlaveConnection.RECEIVED_ROW_KEYS);
+    log.info("receivedCellValues=" + CountingReplicationSlaveConnection.RECEIVED_CELL_VALUES);
+    Assert.assertEquals(expectedNumEvents, CountingReplicationSlaveConnection.RECEIVED_ROW_KEYS.size());
+    Assert.assertEquals(expectedNumEvents, CountingReplicationSlaveConnection.RECEIVED_CELL_VALUES.size());
   }
 
   private void waitForEvents(int expectedNumEvents) {
     long start = System.currentTimeMillis();
-    while (MasterlessDummyConnection.NUM_RECEIVED_ACTIONS.get() < expectedNumEvents) {
+    while (CountingReplicationSlaveConnection.NUM_RECEIVED_ACTIONS.get() < expectedNumEvents) {
       if (System.currentTimeMillis() - start > WAIT_TIMEOUT) {
         throw new RuntimeException("Waited too long on " + expectedNumEvents + ", only have "
-            + MasterlessDummyConnection.NUM_RECEIVED_ACTIONS.get() + " after " + WAIT_TIMEOUT + " milliseconds");
+            + CountingReplicationSlaveConnection.NUM_RECEIVED_ACTIONS.get() + " after " + WAIT_TIMEOUT + " milliseconds");
       }
       try {
         Thread.sleep(100);

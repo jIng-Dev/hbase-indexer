@@ -39,22 +39,21 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes; 
 
 
-/** 
- * A masterless regionserver connection that essentially just logs and counts replicated rows.
+/**
+ * Essentially just logs and counts replication events arriving from a region server of the HBase
+ * slave cluster.
  */ 
-public final class MasterlessDummyConnection extends MasterlessRegionServerConnection { 
+public final class CountingReplicationSlaveConnection extends ReplicationSlaveConnection { 
   
   static final AtomicLong NUM_RECEIVED_ACTIONS = new AtomicLong(0);
   static final List<String> RECEIVED_ROW_KEYS = Collections.synchronizedList(new ArrayList<String>());
   static final List<String> RECEIVED_CELL_VALUES = Collections.synchronizedList(new ArrayList<String>());
 
-  private static final Log LOG = LogFactory.getLog(MasterlessDummyConnection.class);
+  private static final Log LOG = LogFactory.getLog(CountingReplicationSlaveConnection.class);
   
-  public MasterlessDummyConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
+  /** This constructor will be called by the slave region server ReplicationSink.batch() */
+  public CountingReplicationSlaveConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
     super(conf, pool, user);
-    
-    // The following approach doesn't work b/c ReplicationSink ctor decorates conf into another conf obj
-    // this.tableNamePredicate = ((MasterlessConnectionParams) conf).getTableNamePredicate();
   } 
 
   @Override 

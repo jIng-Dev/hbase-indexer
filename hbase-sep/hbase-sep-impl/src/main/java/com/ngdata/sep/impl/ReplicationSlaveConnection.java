@@ -58,23 +58,46 @@ import com.google.protobuf.ServiceException;
 
 
 /**
- * The hbase-indexer catches the replication stream in replicateBatch() 
- * so it can insert into an index or similar.
+ * A HBase region server (HRegionServer) of the HBase slave cluster sends WAL edits as replication
+ * events via ReplicationSink.replicateEntries() to Table.batch() and onto
+ * {@link #replicateBatch(List, Object[], TableName)}, which is a method that can be overriden to
+ * receive the replication stream and apply custom behavior based on its events.
+ * <p/>
+ * For example, an hbase-indexer can override {@link #replicateBatch(List, Object[], TableName)} to
+ * forward the replication stream/events to a Lucene/Solr index to keep the index in sync with the
+ * state of the underlying HBase table.
  */ 
-abstract class MasterlessRegionServerConnection implements Connection { 
+abstract class ReplicationSlaveConnection implements Connection { 
   
   private final Configuration conf; 
   private final User user; 
   private final ExecutorService pool; 
   private volatile boolean closed = false;
 
-  public MasterlessRegionServerConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
+  /** This constructor will be called by the slave region server ReplicationSink.batch() */
+  public ReplicationSlaveConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
     this.conf = conf; 
     this.user = user; 
     this.pool = pool; 
   }
   
-  /** Implement this method for custom behaviour */
+  /**
+   * Implement this method for custom behaviour; Same as {@link Table#batch(List, Object[])} except
+   * that this method also supplies the table name of the HBase source table from which the actions
+   * aka mutations originate.
+   * 
+   * @param actions
+   *          list of Put and Delete mutations
+   * 
+   * @param results
+   *          reserved for potential future use
+   * 
+   * @param tableName
+   *          the table name of the HBase source table from which the actions aka mutations
+   *          originate
+   * 
+   * @throws IOException
+   */
   abstract protected void replicateBatch(List<? extends Row> actions, Object[] results, TableName tableName) 
       throws IOException, InterruptedException;
   
@@ -113,7 +136,9 @@ abstract class MasterlessRegionServerConnection implements Connection {
 
   @Override 
   public void close() throws IOException { 
-    if (!this.closed) this.closed = true; 
+    if (!this.closed) {
+      this.closed = true; 
+    }
   } 
 
   @Override 
@@ -124,7 +149,7 @@ abstract class MasterlessRegionServerConnection implements Connection {
   @Override 
   public TableBuilder getTableBuilder(final TableName tn, ExecutorService pool) { 
     if (isClosed()) { 
-      throw new RuntimeException("IndexerConnection is closed."); 
+      throw new RuntimeException(getClass().getName() + " is closed."); 
     } 
     final Configuration passedInConfiguration = getConfiguration();
     
@@ -166,9 +191,10 @@ abstract class MasterlessRegionServerConnection implements Connection {
           } 
 
           @Override 
+          // This method is called from the slave region server's ReplicationSink.batch()
           public void batch(List<? extends Row> actions, Object[] results) 
           throws IOException, InterruptedException { 
-            MasterlessRegionServerConnection.this.replicateBatch(actions, results, tableName);
+            ReplicationSlaveConnection.this.replicateBatch(actions, results, tableName);
           }
           
           @Override 

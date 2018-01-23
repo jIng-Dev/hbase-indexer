@@ -22,8 +22,10 @@ import org.apache.hadoop.hbase.replication.regionserver.WALEntrySinkFilter;
 import com.google.common.base.Preconditions;
 
 /**
- * A facility to filter out all replication WAL entries that arrive from irrelevant hbase source
- * tables or that stem from a time before an indexer was created.
+ * A callback facility to filter out all replication WAL entries that arrive from irrelevant hbase
+ * source tables or that stem from a time before an indexer was created.
+ * 
+ * This class is called from the slave region server's ReplicationSink.
  */
 public final class SepWALEntrySinkFilter implements WALEntrySinkFilter {
 
@@ -32,12 +34,14 @@ public final class SepWALEntrySinkFilter implements WALEntrySinkFilter {
     public SepWALEntrySinkFilter() {}
     
     @Override 
+    // Called from ReplicationSink.setupWALEntrySinkFilter()
     public void init(Connection connection) {
         this.params = ((SepConnection) connection).getParams();
         Preconditions.checkNotNull(this.params);
     }
   
     @Override 
+    // Called from ReplicationSink.replicateEntries()
     public boolean filter(TableName table, long writeTime) {
         if (!params.getTableNamePredicate().apply(table)) {
             return true;

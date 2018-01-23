@@ -46,8 +46,8 @@
     --> 
   <property> 
     <name>hbase.client.connection.impl</name> 
-    <value>com.ngdata.sep.impl.SepConnection</value> 
-    <description>A customs connection implementation just so we can interject our 
+    <value>com.ngdata.sep.impl.SomeCustomReplicationSlaveConnection</value> 
+    <description>A custom connection implementation just so we can interject our 
       own Table class, one that has an override for the batch call which receives 
       the replication stream edits; i.e. it is called by the replication sink 
       #replicateEntries method.</description> 

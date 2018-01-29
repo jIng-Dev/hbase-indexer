@@ -33,7 +33,7 @@
     <version.hadoop>${cdh.hadoop.version}</version.hadoop>    
     <version.zookeeper>${cdh.zookeeper.version}</version.zookeeper>
     <version.jackson>1.9.13</version.jackson>
-    <version.jackson-hadoop>2.7.8</version.jackson-hadoop>
+    <version.jackson-hadoop>${cdh.jackson2.version}</version.jackson-hadoop>
     <version.jetty>${cdh.jetty9.version}</version.jetty>
     <version.httpclient>${cdh.httpcomponents.version}</version.httpclient>
     <version.httpcore>${cdh.httpcomponents.core.version}</version.httpcore>

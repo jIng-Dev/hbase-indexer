@@ -26,26 +26,26 @@
 
   <properties>
     <version.solr>${cdh.solr.version}</version.solr>
-    <version.guava>11.0.2</version.guava>
+    <version.guava>${cdh.guava.version}</version.guava>
     <version.joda-time>${cdh.joda-time.version}</version.joda-time>
     <version.slf4j>${cdh.slf4j.version}</version.slf4j>
     <version.hbase>${cdh.hbase.version}</version.hbase>
     <version.hadoop>${cdh.hadoop.version}</version.hadoop>    
     <version.zookeeper>${cdh.zookeeper.version}</version.zookeeper>
-    <version.jackson>1.9.13</version.jackson>
+    <version.jackson>${cdh.jackson.version}</version.jackson>
     <version.jackson-hadoop>${cdh.jackson2.version}</version.jackson-hadoop>
     <version.jetty>${cdh.jetty9.version}</version.jetty>
     <version.httpclient>${cdh.httpcomponents.version}</version.httpclient>
     <version.httpcore>${cdh.httpcomponents.core.version}</version.httpcore>
     <version.kite>${cdh.kite.version}</version.kite>
     <version.jersey>${cdh.jersey.version}</version.jersey>
-    <version.curator>2.7.1</version.curator>
+    <version.curator>${cdh.curator.version}</version.curator>
     <version.solr-security-util>${cdh.solr.version}</version.solr-security-util>
     <version.sentry-binding-hbase-indexer>${cdh.sentry.version}</version.sentry-binding-hbase-indexer>    
-    <version.netty>4.1.1.Final</version.netty>
-    <version.netty.hadoop>3.10.5.Final</version.netty.hadoop>
+    <version.netty>${cdh.io.netty-all.version}</version.netty>
+    <version.netty.hadoop>${cdh.io.netty.version}</version.netty.hadoop>
         
-    <version.surefire.plugin>2.19.1</version.surefire.plugin>
+    <version.surefire.plugin>${cdh.surefire.version}</version.surefire.plugin>
     <version.failsafe.plugin>${version.surefire.plugin}</version.failsafe.plugin>
     <skip.surefire.tests>${skipTests}</skip.surefire.tests>
 
@@ -499,7 +499,7 @@
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>4.8.1</version>
+        <version>${cdh.junit.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>

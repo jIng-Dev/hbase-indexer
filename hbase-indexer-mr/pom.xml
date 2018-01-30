@@ -425,7 +425,7 @@
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.5</version>
+        <version>${cdh.commons-io.version}</version>
       </dependency>
 
     </dependencies>

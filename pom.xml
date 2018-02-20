@@ -338,10 +338,6 @@
             <groupId>org.apache.sentry</groupId>
             <artifactId>sentry-shaded-miscellaneous</artifactId>
           </exclusion>
-          <exclusion>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
-          </exclusion>
         </exclusions>
       </dependency>
       <dependency>

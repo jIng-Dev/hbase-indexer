@@ -744,7 +744,7 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
     private void modifyAclsForGoLive(Path outputDir, Path resultsDir, FileSystem fs) {
       // let's allow users to disable this if they want to avoid the warning or
       // something unexpected happens
-      boolean skip = Boolean.parseBoolean(System.getProperty("mrit.skipAddHdfsAcls", "false"));
+      boolean skip = Boolean.parseBoolean(System.getProperty("hbbi.skipAddHdfsAcls", "false"));
       if (!skip) {
         // in case the solr process is running as a different user
         String user = System.getProperty("solr.authorization.superuser", "solr");

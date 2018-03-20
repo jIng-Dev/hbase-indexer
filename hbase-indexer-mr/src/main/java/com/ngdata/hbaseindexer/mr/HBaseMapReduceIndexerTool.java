@@ -92,7 +92,6 @@ import static com.ngdata.hbaseindexer.indexer.SolrClientFactory.createHttpSolrCl
 import static com.ngdata.hbaseindexer.util.solr.SolrConnectionParamUtil.getSolrMaxConnectionsPerRoute;
 import static com.ngdata.hbaseindexer.util.solr.SolrConnectionParamUtil.getSolrMaxConnectionsTotal;
 import static com.ngdata.hbaseindexer.util.solr.SolrConnectionParamUtil.getSolrMode;
-import static org.apache.lucene.util.MathUtil.log;
 import static org.apache.solr.hadoop.MapReduceIndexerTool.RESULTS_DIR;
 
 /**
@@ -783,6 +782,13 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
       AclEntry.Builder builder = new AclEntry.Builder();
       builder.setType(type).setName(name).setPermission(action).setScope(scope);
       return builder.build();
+    }
+
+    /**
+     * Returns <tt>log<sub>base</sub>value</tt>.
+     */
+    private double log(double base, double value) {
+        return Math.log(value) / Math.log(base);
     }
 
 }

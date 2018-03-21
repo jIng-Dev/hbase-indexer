@@ -39,6 +39,7 @@
     <version.httpcore>${cdh.httpcomponents.core.version}</version.httpcore>
     <version.kite>${cdh.kite.version}</version.kite>
     <version.jersey>${cdh.jersey.version}</version.jersey>
+    <version.jaxb-api>${cdh.jaxb-api.version}</version.jaxb-api>
     <version.curator>${cdh.curator.version}</version.curator>
     <version.solr-security-util>${cdh.solr.version}</version.solr-security-util>
     <version.sentry-binding-hbase-indexer>${cdh.sentry.version}</version.sentry-binding-hbase-indexer>    
@@ -795,6 +796,11 @@
         <artifactId>jsr311-api</artifactId>
         <version>1.1.1</version>
       </dependency>
+      <dependency>
+        <groupId>javax.xml.bind</groupId>
+        <artifactId>jaxb-api</artifactId>
+        <version>${version.jaxb-api}</version>
+       </dependency>
       <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>

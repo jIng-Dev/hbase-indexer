@@ -31,6 +31,7 @@ public class IdAddingSolrUpdateWriter implements SolrUpdateWriter {
     private boolean idUsed = false;
     private final String tableNameField;
     private final String tableName;
+    private static final boolean LEGACY_MODE = Boolean.getBoolean("IdAddingSolrUpdateWriter.legacyMode"); // defaults to false
     
     /**
      * Construct with the document id field and doc id to be added when necessary.
@@ -59,14 +60,16 @@ public class IdAddingSolrUpdateWriter implements SolrUpdateWriter {
     public void add(SolrInputDocument solrDocument) {
         String docId = documentId;
         SolrInputField uniqueKeySolrField = solrDocument.getField(uniqueKeyField);
-        if (uniqueKeySolrField == null) {
+        if (uniqueKeySolrField == null || uniqueKeySolrField.getValueCount() == 0) {
             if (idUsed) {
                 throw new IllegalStateException("Document id '" + documentId + "' has already been used by this record");
             }
             solrDocument.addField(uniqueKeyField, documentId);
             idUsed = true;
-        } else {
+        } else if (LEGACY_MODE) {
             docId = uniqueKeySolrField.getValue().toString();
+        } else {
+            docId = uniqueKeySolrField.getFirstValue().toString();
         }
         
         if (tableNameField != null) {

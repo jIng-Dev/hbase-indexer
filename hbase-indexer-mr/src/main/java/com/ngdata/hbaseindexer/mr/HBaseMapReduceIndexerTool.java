@@ -42,6 +42,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.input.NLineInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
@@ -177,6 +178,13 @@ public class HBaseMapReduceIndexerTool extends Configured implements Tool {
             Utils.setLogConfigFile(hbaseIndexingOpts.log4jConfigFile, getConf());
             addDistributedCacheFile(hbaseIndexingOpts.log4jConfigFile, conf);
         }
+
+        // Set mapreduce.job.user.classpath.first=true
+        final String mapreduceJobUserClasspathFirst = MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST;
+        if (conf.get(mapreduceJobUserClasspathFirst) == null) {
+            conf.setBoolean(mapreduceJobUserClasspathFirst, true);
+        }
+        LOG.info("Using " + mapreduceJobUserClasspathFirst + "=" + conf.get(mapreduceJobUserClasspathFirst));
 
         Job job = Job.getInstance(getConf());
         job.setJobName(getClass().getSimpleName() + "/" + HBaseIndexerMapper.class.getSimpleName());

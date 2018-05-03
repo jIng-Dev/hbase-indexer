@@ -46,9 +46,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 
 @Path("indexer")
@@ -75,16 +77,26 @@ public class SentryIndexResource extends CliCompatibleIndexResource {
     if (authzBinding == null) {
       throwNullBindingException();
     }
-    Collection<Indexer> indexers = super.get(uriInfo, securityContext).stream()
-        .map(indexerDefinition -> new Indexer(indexerDefinition.getName()))
-        .collect(Collectors.toList());
+
+    Map<String, IndexerDefinition> unfilteredIndexerDefinitions = new HashMap<String, IndexerDefinition>();
+    Collection<Indexer> unfilteredIndexers = new ArrayList<Indexer>();
+    for (IndexerDefinition indexerDefinition : super.get(uriInfo, securityContext)) {
+      unfilteredIndexerDefinitions.put(indexerDefinition.getName(), indexerDefinition);
+      unfilteredIndexers.add(new Indexer(indexerDefinition.getName()));
+    }
+
+    Collection<Indexer> filteredIndexers;
     try {
-      return authzBinding.filterIndexers(getSubject(securityContext), indexers).stream()
-          .map(indexer -> new IndexerDefinitionBuilder().name(indexer.getName()).build())
-          .collect(Collectors.toList());
+      filteredIndexers = authzBinding.filterIndexers(getSubject(securityContext), unfilteredIndexers);
     } catch (SentryUserException e) {
       throw new IndexerServerException(HttpServletResponse.SC_UNAUTHORIZED, new SentryBindingException(e));
     }
+      
+    Collection<IndexerDefinition> filteredIndexerDefinitions = new ArrayList<IndexerDefinition>();
+    for (Indexer indexer : filteredIndexers) {
+      filteredIndexerDefinitions.add(unfilteredIndexerDefinitions.get(indexer.getName()));
+    }
+    return filteredIndexerDefinitions;
   }
 
   /**

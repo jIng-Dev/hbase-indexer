@@ -16,6 +16,7 @@
 package com.ngdata.sep.impl;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -86,6 +88,7 @@ public class SepConsumer {
     private final Predicate<TableName> tableNamePredicate;
     private boolean running = false;
     private final Log log = LogFactory.getLog(getClass());
+    private static final AtomicBoolean AT_MOST_ONCE = new AtomicBoolean(true);
 
     private static final String MASTERLESS_ROOT_ZK_PATH = "/ngdata/sep/hbase-masterless";
     private static final String MASTERLESS_ZK_DIR_SUFFIX = "hbaseindexer.masterless.zkDirSuffix";
@@ -160,6 +163,9 @@ public class SepConsumer {
         // HBASE-19804 setMiniClusterMode(true) hack to allow multiple HRegionServer per JVM even in non-unit tests
         DefaultMetricsSystem.setMiniClusterMode(true);
 
+        if (AT_MOST_ONCE.getAndSet(false)) {
+            dumpConfiguration("Creating masterless RegionServer using", masterlessConf);
+        }
         this.regionServer = new HRegionServer(masterlessConf);        
         this.serverName = regionServer.getServerName();
 
@@ -310,4 +316,9 @@ public class SepConsumer {
         }
     }
 
+    private void dumpConfiguration(String msgPrefix, Configuration conf) throws IOException {
+        StringWriter strWriter = new StringWriter();
+        Configuration.dumpConfiguration(conf, strWriter);
+        log.info(msgPrefix + " " + conf + " with properties: " + strWriter.toString());
+    }
 }

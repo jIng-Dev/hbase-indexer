@@ -55,6 +55,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.net.URL;
 import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
@@ -117,6 +119,7 @@ public class Main {
      *             as the hbase/hadoop settings. Typically created using {@link HBaseIndexerConfiguration}.
      */
     public void startServices(Configuration conf) throws Exception {
+        dumpConfiguration("Starting services using", conf);
         String hostname = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
                 conf.get("hbase.regionserver.dns.interface", "default"),
                 conf.get("hbase.regionserver.dns.nameserver", "default")));
@@ -270,5 +273,11 @@ public class Main {
         public void run() {
             stopServices();
         }
+    }
+
+    private void dumpConfiguration(String msgPrefix, Configuration conf) throws IOException {
+        StringWriter strWriter = new StringWriter();
+        Configuration.dumpConfiguration(conf, strWriter);
+        log.info(msgPrefix + " " + conf + " with properties: " + strWriter.toString());
     }
 }

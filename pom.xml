@@ -343,6 +343,11 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>org.apache.sentry</groupId>
+        <artifactId>sentry-tools</artifactId>
+        <version>${version.sentry-binding-hbase-indexer}</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.solr</groupId>
         <artifactId>solr-solrj</artifactId>
         <version>${version.solr}</version>

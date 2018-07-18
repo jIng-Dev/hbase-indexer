@@ -165,6 +165,10 @@
       <groupId>org.apache.sentry</groupId>
       <artifactId>sentry-binding-hbase-indexer</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.sentry</groupId>
+      <artifactId>sentry-tools</artifactId>
+    </dependency>
     
     <!-- for Hadoop MiniDFSCluster tests -->
     <dependency>

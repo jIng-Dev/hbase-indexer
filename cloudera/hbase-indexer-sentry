@@ -46,4 +46,4 @@ export LOG4J_PROPS=${SOLR_CONF_DIR}/log4j.properties
 CLASSPATH="${HBASE_INDEXER_LIBRARY_PATH}:${SENTRY_CONF_DIR}"
 
 PATH=$JAVA_HOME/bin:$PATH $JVM $SENTRYCLI_JVM_FLAGS -Dlog4j.configuration=$LOG4J_CONF -classpath "$CLASSPATH" \
- "org.apache.sentry.provider.db.generic.tools.SentryShellIndexer" -conf "${SENTRY_CONF_DIR}/sentry-site.xml" ${1+"$@"}
+ "org.apache.sentry.cli.tools.SentryShellIndexer" -conf "${SENTRY_CONF_DIR}/sentry-site.xml" ${1+"$@"}

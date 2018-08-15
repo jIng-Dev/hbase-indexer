@@ -1191,10 +1191,14 @@ public class IndexerIT {
 
     private void checkLifecycleEvents(int subscribes, int unsubscribes, int deletes, int builds,
             IndexerLifecycleListener listener) {
-        Mockito.verify(listener, Mockito.times(subscribes)).onSubscribe(Mockito.any(IndexerDefinition.class));
-        Mockito.verify(listener, Mockito.times(unsubscribes)).onUnsubscribe(Mockito.any(IndexerDefinition.class));
-        Mockito.verify(listener, Mockito.times(deletes)).onDelete(Mockito.any(IndexerDefinition.class));
-        Mockito.verify(listener, Mockito.times(builds)).onBatchBuild(Mockito.any(IndexerDefinition.class));
+        Mockito.verify(listener, Mockito.timeout(5000).times(subscribes))
+            .onSubscribe(Mockito.any(IndexerDefinition.class));
+        Mockito.verify(listener, Mockito.times(unsubscribes))
+            .onUnsubscribe(Mockito.any(IndexerDefinition.class));
+        Mockito.verify(listener, Mockito.times(deletes))
+            .onDelete(Mockito.any(IndexerDefinition.class));
+        Mockito.verify(listener, Mockito.times(builds))
+            .onBatchBuild(Mockito.any(IndexerDefinition.class));
     }
 
 

@@ -155,6 +155,12 @@ public class ReplicationStatusRetriever {
         Map<String, Map<String, Status>> statusByPeerAndServer = Maps.newHashMap();
 
         String regionServerPath = zookeeperZNodeParent + "/replication/rs";
+
+        // Consider missing replication path in ZK as no replication peer is configured
+        if (zk.exists(regionServerPath, false) == null) {
+            return new ReplicationStatus(statusByPeerAndServer);
+        }
+
         List<String> regionServers = zk.getChildren(regionServerPath, false);
 
         for (String server : regionServers) {

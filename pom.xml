@@ -47,6 +47,7 @@
     <version.hadoop>${cdh.hadoop.version}</version.hadoop>
     <version.zookeeper>${cdh.zookeeper.version}</version.zookeeper>
     <version.jackson>${cdh.jackson.version}</version.jackson>
+    <version.jackson-mapper-asl>${cdh.jackson-mapper-asl.version}</version.jackson-mapper-asl>
     <version.httpclient>${cdh.httpcomponents.version}</version.httpclient>
     <version.kite>${cdh.kite.version}</version.kite>
     <version.search>${cdh.search.version}</version.search>
@@ -325,7 +326,7 @@
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
-        <version>${version.jackson}</version>
+        <version>${version.jackson-mapper-asl}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>

@@ -921,13 +921,6 @@
     </repository>
 
     <repository>
-      <id>lilyproject.snapshot</id>
-      <name>Lily Maven snapshot repository</name>
-      <url>http://lilyproject.org/maven/maven2/deploy/</url>
-    </repository>
-
-
-    <repository>
       <id>cdh.repo</id>
       <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
       <name>Cloudera Repositories</name>

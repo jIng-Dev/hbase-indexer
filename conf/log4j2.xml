@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout
+				pattern="%d{YYYY-MM-dd HH:mm:ss} [%t] %-5p %c{1}:%L - %msg%n" />
+		</Console>
+		<RollingFile name="RollingFile" filename="/log/solr/hbase-indexer-logs.log" filepattern="/log/solr/hbase-indexer-logs-%d{YYYYMMddHHmmss}.log">
+			<PatternLayout
+				pattern="%d{YYYY-MM-dd HH:mm:ss} [%t] %-5p %c{1}:%L - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="100 MB" />
+			</Policies>
+			<DefaultRolloverStrategy max="20" />
+		</RollingFile>
+		<RollingFile name="RollingFilePemP" filename="/log/solr/pem-custom-mapper-prescription.log" filepattern="/log/solr/pem-custom-mapper-prescription-%d{YYYYMMddHHmmss}.log">
+			<PatternLayout
+				pattern="%d{YYYY-MM-dd HH:mm:ss} [%t] %-5p %c{1}:%L - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="100 MB" />
+			</Policies>
+			<DefaultRolloverStrategy max="20" />
+		</RollingFile>
+		<Async name="AsyncP">
+			<AppenderRef ref="RollingFilePemP" />
+		</Async>
+		<RollingFile name="RollingFilePemM" filename="/log/solr/pem-custom-mapper-modification.log" filepattern="/log/solr/pem-custom-mapper-modification-%d{YYYYMMddHHmmss}.log">
+			<PatternLayout
+				pattern="%d{YYYY-MM-dd HH:mm:ss} [%t] %-5p %c{1}:%L - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="100 MB" />
+			</Policies>
+			<DefaultRolloverStrategy max="20" />
+		</RollingFile>
+		<Async name="AsyncM">
+			<AppenderRef ref="RollingFilePemM" />
+		</Async>
+		<RollingFile name="RollingFilePemD" filename="/log/solr/pem-custom-mapper-delivrance.log" filepattern="/log/solr/pem-custom-mapper-delivrance-%d{YYYYMMddHHmmss}.log">
+			<PatternLayout
+				pattern="%d{YYYY-MM-dd HH:mm:ss} [%t] %-5p %c{1}:%L - %msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="100 MB" />
+			</Policies>
+			<DefaultRolloverStrategy max="20" />
+		</RollingFile>
+		<Async name="AsyncD">
+			<AppenderRef ref="RollingFilePemD" />
+		</Async>
+	</Appenders>
+	<Loggers>
+		<Logger name="fr.cnam.pem.lily.prescription" level="info"
+			additivity="false">
+			<AppenderRef ref="AsyncP" />
+		</Logger>
+		<Logger name="fr.cnam.pem.lily.modification" level="info"
+			additivity="false">
+			<AppenderRef ref="AsyncM" />
+		</Logger>
+		<Logger name="fr.cnam.pem.lily.delivrance" level="info"
+			additivity="false">
+			<AppenderRef ref="AsyncD" />
+		</Logger>
+		<Root level="info">
+			<AppenderRef ref="RollingFile" />
+			<AppenderRef ref="Console" />
+		</Root>
+	</Loggers>
+</Configuration>
